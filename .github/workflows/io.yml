@@ -1,6 +1,6 @@
 # https://docs.github.com/en/actions/using-jobs/defining-outputs-for-jobs
 
-name: Permissions
+name: Input/Output
 
 on:
   push:
