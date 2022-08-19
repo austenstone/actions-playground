@@ -1,6 +1,6 @@
 # https://docs.github.com/en/actions/examples/using-concurrency-expressions-and-a-test-matrix
 
-name: Node.js Tests
+name: Advanced - Node.js Tests
 
 # **What it does**: Runs our tests.
 # **Why we have it**: We want our tests to pass before merging code.
