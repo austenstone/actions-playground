@@ -33,8 +33,8 @@ jobs:
       - name: Install dependencies
         run: npm i node --save
 
-      - name: Build
-        run: npm build
+      # - name: Build
+      #   run: npm build
 
-      - name: Test
-        run: npm test
+      # - name: Test
+      #   run: npm test
