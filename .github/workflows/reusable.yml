@@ -1,0 +1,22 @@
+name: Basic
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  # Allows you to call the reusable workflow
+  workflow_call:
+    inputs:
+      username:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run a one-line script
+        run: echo Hello, ${{ inputs.username }}!
