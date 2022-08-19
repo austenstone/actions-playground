@@ -1,0 +1,15 @@
+name: Node CI
+
+on: [push]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Artifact
+        run: echo 'Hello, World!' > my_file.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: my_file.txt
+          retention-days: 5
