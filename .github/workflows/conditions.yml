@@ -37,3 +37,8 @@ jobs:
     if: ${{ 2 > 1 }}
     steps:
       - run: echo '2 > 1 ✅'
+
+  last:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'I am the last step'
