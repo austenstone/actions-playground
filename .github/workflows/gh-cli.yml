@@ -1,6 +1,6 @@
 # https://docs.github.com/en/actions/examples/using-the-github-cli-on-a-runner
 
-name: Check all English links
+name: Advanced - Check all English links
 
 # **What it does**: This script once a day checks all English links and reports in issues.
 # **Why we have it**: We want to know if any links break.
