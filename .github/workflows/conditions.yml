@@ -15,30 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'austenstone'
     steps:
-        - run: echo 'Hey what's up Austen!'
+      - run: echo 'Hey what's up Austen!'
 
-  failure:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Failing step
-      id: demo
-      run: exit 1
-    - if: ${{ failure() && steps.demo.conclusion == 'failure' }}
-      run: echo 'The previous step has failed'
-  
-  always:
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    steps:
-    - run: echo 'I always run'
-  
   math:
     runs-on: ubuntu-latest
     if: ${{ 2 > 1 }}
     steps:
-      - run: echo '2 > 1 ✅'
+      - name: Failing step
+        id: demo
+        run: exit 1
+        
+      - if: ${{ failure() && steps.demo.conclusion == 'failure' }}
+        run: echo 'The previous step has failed'
 
-  last:
-    runs-on: ubuntu-latest
-    steps:
+      - run: echo 'I always run'
+        if: ${{ always() }}
+
+      - run: echo '2 > 1 ✅'
+        if: ${{ 2 > 1 }}
+
       - run: echo 'I am the last step'
