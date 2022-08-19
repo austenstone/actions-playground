@@ -1,4 +1,4 @@
-name: example-workflow
+name: Conditions
 
 on:
   push:
