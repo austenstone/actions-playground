@@ -1,0 +1,39 @@
+name: example-workflow
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  repo:
+    runs-on: ubuntu-latest
+    if: github.repository == 'octo-org/octo-repo-prod'
+    steps:
+      - run: echo 'You are on repo octo-org/octo-repo-prod'
+  
+  actor:
+    runs-on: ubuntu-latest
+    if: github.actor == 'austenstone'
+    steps:
+        - run: echo 'Hey what's up Austen!'
+
+  failure:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Failing step
+      id: demo
+      run: exit 1
+    - if: ${{ failure() && steps.demo.conclusion == 'failure' }}
+      run: echo 'The previous step has failed'
+  
+  always:
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+    - run: echo 'I always run'
+  
+  math:
+    runs-on: ubuntu-latest
+    if: ${{ 2 > 1 }}
+    steps:
+      - run: echo '2 > 1 ✅'
