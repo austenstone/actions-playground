@@ -7,7 +7,7 @@
 # To get a newer version, you will need to update the SHA.
 # You can also reference a tag or branch, but the action may change without warning.
 
-name: Weekly Team Sync
+name: Issues - Weekly Team Sync
 on:
   schedule:
     - cron: 20 07 * * 1
