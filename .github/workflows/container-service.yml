@@ -1,5 +1,6 @@
 name: Redis container example
-on: push
+on:
+  push:
 
 jobs:
   # Label of the container job
@@ -15,3 +16,6 @@ jobs:
       redis:
         # Docker Hub image
         image: redis
+      
+    steps:
+      - run: echo 'Service Running!'
