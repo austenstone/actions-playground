@@ -1,4 +1,4 @@
-name: Basic
+name: Reusable Workflow
 
 on:
   push:
