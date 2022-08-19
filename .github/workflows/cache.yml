@@ -1,6 +1,6 @@
 # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#output-parameters-for-the-cache-action
 
-name: Caching with npm
+name: Caching
 
 on:
   push:
