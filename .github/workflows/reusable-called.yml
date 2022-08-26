@@ -1,10 +1,6 @@
 name: Reusable Workflow
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
-  # Allows you to call the reusable workflow
   workflow_call:
     inputs:
       username:
