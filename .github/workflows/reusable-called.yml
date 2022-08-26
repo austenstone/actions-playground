@@ -4,7 +4,8 @@ on:
   workflow_call:
     inputs:
       username:
-        required: true
+        default: ${{ github.actor }}
+        required: false
         type: string
 
 jobs:
