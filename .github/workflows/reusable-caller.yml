@@ -7,6 +7,6 @@ on:
 
 jobs:
   build:
-    uses: ./.github/workflows/reusable.yml
+    uses: ./.github/workflows/reusable-called.yml
     with:
       username: ${{ github.actor }}
