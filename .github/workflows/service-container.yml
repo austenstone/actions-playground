@@ -20,4 +20,4 @@ jobs:
           - 8080:80
       
     steps:
-      - run: telnet nginx 80
+      - run: npx detect-port 80
