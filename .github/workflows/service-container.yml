@@ -5,7 +5,6 @@ on:
 jobs:
   container-job:
     runs-on: ubuntu-latest
-    container: node
 
     services:
       nginx:
@@ -14,4 +13,5 @@ jobs:
           - 8080:80
       
     steps:
-      - run: npx detect-port 80 --verbose
+      - run: apt-get install -y telnet
+      - run: telnet nginx 80
