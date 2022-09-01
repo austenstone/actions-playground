@@ -1,6 +1,8 @@
 # GitHub Actions Best Practices
 Best practices to follow when using GitHub Actions.
 
+# Resources
+
 - [Security hardening for GitHub Actions](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
 
 # Development
