@@ -4,14 +4,35 @@ Best practices to follow when using GitHub Actions.
 # Resources
 
 - [Security hardening for GitHub Actions](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [Actions Documentation](https://docs.github.com/en/actions)
+- [Community Discussions](https://github.com/orgs/community/discussions/)
 
 # Development
 
-## IDE
-Use [VSCode](https://code.visualstudio.com/).
+## [VSCode](https://code.visualstudio.com/)
+Your local IDE where you develop.
 
-### Language/Syntax support
-Use Read Hat's [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) extension which utilizes [schemastore.org](https://www.schemastore.org/json/). This will provide tons of features such as syntax highlighting and formatting.
+### [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
+Get Language/Syntax support using Read Hat's [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) extension which utilizes [schemastore.org](https://www.schemastore.org/json/). This will provide tons of features such as syntax highlighting and formatting.
+
+### [Copilot](https://github.com/features/copilot/)
+Use Copilot for advanced autocompletion. See [How Do I Get Copilot?](https://github.com/austenstone/copilot-demo#how-do-i-get-copilot).
+
+## Debugging
+
+### [nektos/act](https://github.com/nektos/act)
+`act` allows you to run your workflows/jobs locally using Docker.
+
+### [Codespaces](https://github.com/features/codespaces)
+Use the integrated debugger to click the “start debugging” button to begin executing the workflow on a GitHub-hosted runner. You can pause execution manually, or you can set breakpoints in the Codespaces editor, indicating a step in a job where you want to pause execution of the workflow. See [documentation](https://docs.github.com/en/codespaces).
+
+### [Debugging with tmate](https://github.com/marketplace/actions/debugging-with-tmate)
+This GitHub Action offers you a direct way to interact with the host system on which the actual scripts (Actions) will run.
+
+## Tools
+
+### [CLI](https://cli.github.com/)
+The GitHub CLI provides a terminal interface for all of github including actions. See [run](https://cli.github.com/manual/gh_run) and [workflow](https://cli.github.com/manual/gh_workflow).
 
 # Workflow Usage
 When writing workflows there are some things to keep in mind.
