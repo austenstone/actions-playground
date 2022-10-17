@@ -1,10 +1,7 @@
-name: Basic
+name: Auth
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
+  workflow_dispatch:
     
 jobs:
   get-temp-token:
@@ -23,4 +20,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.get_workflow_token.outputs.token }}
         with:
-          ....
+          tag_name: v1.1.1
+          release_name: Release v1.0.1
