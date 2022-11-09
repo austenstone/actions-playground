@@ -1,0 +1,33 @@
+name: Container
+on:
+  push:
+    branches: [ main ]
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      output1: ${{ steps.step1.outputs.test }}
+    steps:
+      - id: step1
+        run: echo "::set-output name=test::node:14.16"
+  job2:
+    runs-on: ubuntu-latest
+    needs: job1
+    steps:
+      - run: echo ${{needs.job1.outputs.output1}} 
+  container-test-job:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{needs.job1.outputs.output1}} 
+      env:
+        NODE_ENV: development
+      ports:
+        - 80
+      volumes:
+        - my_docker_volume:/volume_mount
+      options: --cpus 1
+    steps:
+      - name: Dump GitHub context
+        id: github_context_step
+        run: echo '${{ toJSON(github) }}'
