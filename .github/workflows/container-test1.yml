@@ -1,4 +1,4 @@
-name: Container
+name: Container Variable Step
 on:
   push:
     branches: [ main ]
