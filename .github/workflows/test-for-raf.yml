@@ -1,0 +1,36 @@
+name: Dependabot Alerts 
+on:
+  push:
+    branches:
+      - master
+      - main
+  
+jobs:
+  exportDependabotAlerts:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: octokit/graphql-action@v2.x
+        id: exportDependabotAlerts
+        with:
+          query: |
+            query export($owner:"rafskov",$repo:"gtpFlask") {
+              repository(owner:"rafskov",name:"gtpFlask") {
+                vulnerabilityAlerts(first:100) {
+                    nodes {
+                        createdAt
+                        dismissedAt
+                        securityVulnerability {
+                            package {
+                                name
+                            }
+                            advisory {
+                                description
+                            }
+                        }
+                    }
+
+                }
+          owner: ${{ github.event.repository.owner.name}}
+          repo: ${{ github.event.repository.name }}
+      env:
+        token: ${{secrets.token}}
