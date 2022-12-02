@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: gh workflow run basic.yml --ref ${{ github.head_ref || github.ref_name }}
+      - run: gh workflow run dump-context.yml --ref ${{ github.head_ref || github.ref_name }}
       # github.head_ref is only set when the workflow was triggered by a pull_request and
       # it contains the value of the source branch of the PR. github.ref_name will than only
       # be used if the workflow was not triggered by a pull_request and it also just contains
