@@ -1,0 +1,25 @@
+name: Dynamic Labels
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # types: [labeled]
+    branches: [ "main" ]
+  workflow_dispatch:
+  on:
+    label:
+      types: [created]
+
+jobs:
+  build:
+    runs-on: ${{ contains(github.event.issue.labels.*.name, 'larger') ? 'larger-4' : 'ubuntu-latest' }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a one-line script
+        run: echo Hello, world!
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
