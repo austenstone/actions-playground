@@ -7,13 +7,10 @@ on:
     # types: [labeled]
     branches: [ "main" ]
   workflow_dispatch:
-  on:
-    label:
-      types: [created]
 
 jobs:
   build:
-    runs-on: ${{ contains(github.event.issue.labels.*.name, 'larger') ? 'larger-4' : 'ubuntu-latest' }}
+    runs-on: ${{ contains(github.event.pull_request.labels.*.name, 'larger') && 'larger-4' || 'ubuntu-latest' }}
 
     steps:
       - uses: actions/checkout@v3
