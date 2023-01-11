@@ -16,7 +16,7 @@ jobs:
       output2: ${{ steps.step2.outputs.test }}
     steps:
       - id: step1
-        run: echo "test=value" >> $GITHUB_OUTPUT
+        run: echo "test=hello" >> $GITHUB_OUTPUT
         # run: echo "::set-output name=test::hello"
       - id: step2
         run: echo "test=world" >> $GITHUB_OUTPUT
