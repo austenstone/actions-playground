@@ -16,11 +16,11 @@ jobs:
       output2: ${{ steps.step2.outputs.test }}
     steps:
       - id: step1
-        # run: echo "test=value" >> $GITHUB_STATE
-        run: echo "::set-output name=test::hello"
+        run: echo "test=value" >> $GITHUB_OUTPUT
+        # run: echo "::set-output name=test::hello"
       - id: step2
-        # run: echo "test=world" >> $GITHUB_STATE
-        run: echo "::set-output name=test::world"
+        run: echo "test=world" >> $GITHUB_OUTPUT
+        # run: echo "::set-output name=test::world"
   job2:
     runs-on: ubuntu-latest
     needs: job1
