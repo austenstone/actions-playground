@@ -1,6 +1,6 @@
 name: Chain Workflows
 
-on: [push]
+on: workflow_dispatch
 
 env:
     GH_TOKEN: ${{ github.token }}

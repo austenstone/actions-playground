@@ -1,6 +1,6 @@
 name: Container Service - Redis
-on:
-  push:
+
+on: workflow_dispatch
 
 jobs:
   container-job:
