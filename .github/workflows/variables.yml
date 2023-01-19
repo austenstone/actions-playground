@@ -1,0 +1,9 @@
+name: Variables
+
+on:
+  workflow_dispatch:
+
+jobs:
+	steps:
+		run: |
+			echo "${{ vars.TEXT }}"
