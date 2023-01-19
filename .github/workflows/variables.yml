@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
+	runs-on: ubuntu-latest
 	steps:
 		run: |
 			echo "${{ vars.TEXT }}"
-			
