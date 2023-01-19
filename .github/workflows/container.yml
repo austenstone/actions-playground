@@ -1,7 +1,7 @@
 name: Container
-on:
-  push:
-    branches: [ main ]
+
+on: workflow_dispatch
+
 jobs:
   container-test-job:
     runs-on: ubuntu-latest
