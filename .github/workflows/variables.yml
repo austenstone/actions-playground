@@ -7,3 +7,4 @@ jobs:
 	steps:
 		run: |
 			echo "${{ vars.TEXT }}"
+			
