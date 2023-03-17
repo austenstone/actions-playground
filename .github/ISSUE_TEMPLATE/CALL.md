@@ -1,11 +1,12 @@
 ---
-name: DEPRECATED Call
-about: [DEPRECATED] Open an issue for a call or remote meeting
+name: Call
+about: Open an issue for a call or remote meeting
 title: 'Call: replace_with_company_name, replace_with_date'
 labels: activity-call
 assignees: ''
 
 ---
+
 <!-- [DEPRECATED] Please use the new issue form https://github.com/github/solutions-engineering/issues/new?assignees=&labels=demo%2Cactivity-call&template=call_com.yml&title=Call%3A+replace_with_company_name%2C+replace_with_date+yyyy-MMM-dd -->
 
 In HQ? Book a room
