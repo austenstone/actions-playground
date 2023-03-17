@@ -1,5 +1,5 @@
 ---
-name: Call
+name: ❌ Call
 about: Open an issue for a call or remote meeting
 title: 'Call: replace_with_company_name, replace_with_date'
 labels: activity-call
