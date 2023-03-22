@@ -1,0 +1,11 @@
+name: Prioritize Labeled PR
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ github.event.label.name == 'priority' && 'priority-runner' || 'ubuntu-latest' }}
+    steps:
+      - run: echo Hello, world!
