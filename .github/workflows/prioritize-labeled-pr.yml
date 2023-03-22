@@ -6,6 +6,6 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ github.event.label.name == 'priority' && 'priority-runner' || 'ubuntu-latest' }}
+    runs-on: ${{ github.event.label.name == 'prioritize' && 'priority-runner' || 'ubuntu-latest' }}
     steps:
       - run: echo Hello, world!
