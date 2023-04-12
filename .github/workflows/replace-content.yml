@@ -24,3 +24,4 @@ jobs:
             fs.writeFileSync('test.json', JSON.stringify(json));
         # This line auto commits back file.
         # - uses: stefanzweifel/git-auto-commit-action@v4
+      - run: cat test.json
