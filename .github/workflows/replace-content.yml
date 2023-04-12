@@ -18,8 +18,7 @@ jobs:
             const json = JSON.parse(content);
             const parts = json.monitoredResourceId.split('/');
             parts[1] = process.env.SHA;
-            parts.join('/');
-            json.monitoredResourceId = parts;
+            json.monitoredResourceId = parts.join('/');
 
             fs.writeFileSync('test.json', JSON.stringify(json));
         # This line auto commits back file.
