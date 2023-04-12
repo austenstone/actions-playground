@@ -17,7 +17,7 @@ jobs:
 
             const json = JSON.parse(content);
             const parts = json.monitoredResourceId.split('/');
-            parts[1] = process.env.SHA;
+            parts[2] = process.env.SHA;
             json.monitoredResourceId = parts.join('/');
 
             fs.writeFileSync('test.json', JSON.stringify(json));
