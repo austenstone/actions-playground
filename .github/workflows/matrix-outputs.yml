@@ -15,10 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         os: ['linux', 'windows','macos']
-        arch: ['x86','x64']
+        outcome: [1, 0]
     steps:
       - id: step1
-        run: echo "result_${{ matrix.os }}_${{ matrix.arch }}=world" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "result_${{ matrix.os }}_=${{ matrix.outcome }}" >> "$GITHUB_OUTPUT"
+          exit ${{ matrix.outcome }}
   job2:
     runs-on: ubuntu-latest
     needs: job1
