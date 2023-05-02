@@ -1,0 +1,13 @@
+name: Get associated PR on merge
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  get_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh api /repos/${{ github.repository }}/commits/${{ github.event.after }}/pulls
+        env:
+          GH_TOKEN: ${{ github.token }}

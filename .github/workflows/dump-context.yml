@@ -1,6 +1,8 @@
 name: Dump Context
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
   workflow_call:
 

@@ -1,0 +1,26 @@
+name: Find and Replace
+
+on: workflow_dispatch
+
+jobs:
+  find-and-replace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/github-script@v6
+        env:
+          SHA: ${{ github.sha }}
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('test.json');
+
+            const json = JSON.parse(content);
+            const parts = json.monitoredResourceId.split('/');
+            parts[2] = process.env.SHA;
+            json.monitoredResourceId = parts.join('/');
+
+            fs.writeFileSync('test.json', JSON.stringify(json));
+      # This line auto commits back file.
+      # - uses: stefanzweifel/git-auto-commit-action@v4
+      - run: cat test.json
