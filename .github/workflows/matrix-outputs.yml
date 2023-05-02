@@ -1,0 +1,30 @@
+name: Matrix Outputs
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['linux', 'windows','macos']
+        outcome: [1, 0]
+    steps:
+      - id: step1
+        run: |
+          echo "result_${{ matrix.os }}_=${{ matrix.outcome }}" >> "$GITHUB_OUTPUT"
+          exit ${{ matrix.outcome }}
+  job2:
+    runs-on: ubuntu-latest
+    needs: job1
+    steps:
+      - run: echo ${{ needs.job1.result }}
+      - run: echo ${{ toJson(needs.job1.outputs) }}
+      - run: echo ${{ toJson(needs.job1) }}
