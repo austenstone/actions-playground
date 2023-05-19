@@ -1,4 +1,4 @@
-name: Container
+name: Container Custom Home
 
 on: workflow_dispatch
 
@@ -15,6 +15,8 @@ jobs:
         - my_docker_volume:/volume_mount
       options: --cpus 1 -e HOME=/mycustomhome
     steps:
+      - shell: bash
+        run: 'echo HOME=/home/sf | sudo tee -a $GITHUB_ENV'
       - name: Check node version
         run: node --version
       - name: Check for dockerenv file
