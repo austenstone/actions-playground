@@ -13,7 +13,7 @@ jobs:
         - 80
       volumes:
         - my_docker_volume:/volume_mount
-      options: --cpus 1 -e HOME=/mycustomhome
+      options: --cpus 1
     steps:
       - run: echo HOME=/home/sf | tee -a $GITHUB_ENV
       - run: echo $HOME
