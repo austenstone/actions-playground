@@ -15,4 +15,4 @@ jobs:
           retention-days: 5
   call-reusable:
     needs: create-and-upload
-    uses: ./.github/workflows/artifacts-in-reusable-called.yml
+    uses: austenstone/actions-playground-2/.github/workflows/artifacts-in-reusable-called.yml@main
