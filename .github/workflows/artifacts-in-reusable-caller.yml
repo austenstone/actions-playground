@@ -14,4 +14,5 @@ jobs:
           path: my_file.txt
           retention-days: 5
   call-reusable:
+    needs: create-and-upload
     uses: ./.github/workflows/artifacts-in-reusable-called.yml
