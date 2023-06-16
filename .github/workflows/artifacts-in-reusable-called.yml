@@ -1,6 +1,7 @@
 name: Artifacts Reusable Called
 
-on: workflow_dispatch
+on:
+  workflow_call:
 
 jobs:
   download-and-print:
