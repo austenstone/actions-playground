@@ -1,5 +1,5 @@
 name: Basic
-run-name: Deploy to ${{ inputs.deploy_target }} by @${{ github.actor }}
+run-name: This was run by @${{ github.actor }} with message ${{ github.event.head_commit.message }}
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
