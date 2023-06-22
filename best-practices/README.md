@@ -23,8 +23,12 @@ Get Language/Syntax support using Read Hat's [YAML](https://marketplace.visualst
 Use Copilot for advanced autocompletion. See [How Do I Get Copilot?](https://github.com/austenstone/copilot-demo#how-do-i-get-copilot).
 
 ## Debugging
+### [Self-hosted](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)
+GitHub self-hosted runners allow you to make your local development environment the runner of jobs on GitHub. Simply add your machine as a self-hosted runner and use the [label](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/using-labels-with-self-hosted-runners) assigned as your runner in the workflow file using [`runs-on`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on).
 
 ### [nektos/act](https://github.com/nektos/act)
+> **Warning**
+> [Self-hosted](#self-hosted) is a much better option for many reasons including the event's context.
 `act` allows you to run your workflows/jobs locally using Docker.
 
 ### [Codespaces](https://github.com/features/codespaces)
