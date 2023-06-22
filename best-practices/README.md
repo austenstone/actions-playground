@@ -29,6 +29,7 @@ GitHub self-hosted runners allow you to make your local development environment 
 ### [nektos/act](https://github.com/nektos/act)
 > **Warning**
 > [Self-hosted](#self-hosted) is a much better option for many reasons including the event's context.
+
 `act` allows you to run your workflows/jobs locally using Docker.
 
 ### [Codespaces](https://github.com/features/codespaces)
