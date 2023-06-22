@@ -46,6 +46,19 @@ The GitHub CLI provides a terminal interface for all of github including actions
 # Workflow Usage
 When writing workflows there are some things to keep in mind.
 
+## Enforcing workflow with [Branch Protection Rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches)
+Branch protection rules allow you to enforce workflow for developers by ensuring they meet requirments before merging their code to a specific branch (typically the default branch).
+
+### [Status Checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/about-status-checks)
+You can ensure that certain checks happen in Actions before newly introuced code is merged to a branch. All actions report a status as the name of the workflow file.
+
+#### Some checks Actions is commonly used to perform
+- Build
+- Test
+- Lint
+- Static application security testing (SAST)
+- Software composition analysis (SCA)
+
 ## Reuse Workflows
 You should call workflows from other workflows to avoid duplication. Practice innersourcing to promote best practices and reuse welldesigned/tested workflows.
 
@@ -237,6 +250,9 @@ Consider using OIDC Connect to interact with the cloud.
 
 ### Why?
 Long-lived credentials are insecure and OIDC Connect allows the use of short-lived access tokens.
+
+### Notes
+The OIDC subject contains metadata such as org/repo/environment that you can use to [Configuring the role and trust policy](https://docs.github.com/en/enterprise-cloud@latest/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#configuring-the-role-and-trust-policy). This can be used to control which branches get access.
 
 ### References
 - [Security hardening your deployments](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments)
