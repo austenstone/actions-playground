@@ -23,9 +23,8 @@ Your local IDE where you develop.
 <!-- ### [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
 Get Language/Syntax support using Read Hat's [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) extension which utilizes [schemastore.org](https://www.schemastore.org/json/). This will provide tons of features such as syntax highlighting and formatting. -->
 
-### [GitHub Actions VS Code Extension](https://github.com/github/engineering/discussions/2864)
-> **Note**
-> GitHub Actions VS Code Extension coming soon. For now use the [Old Extension](https://github.com/cschleiden/vscode-github-actions).
+### [GitHub Actions VS Code Extension](https://marketplace.visualstudio.com/items?itemName=github.vscode-github-actions)
+This is the **OFFICIAL** GitHub Actions VS Code extension
 
 ### [Copilot](https://github.com/features/copilot/)
 Use Copilot for advanced autocompletion. See [How Do I Get Copilot?](https://github.com/austenstone/copilot-demo#how-do-i-get-copilot).
