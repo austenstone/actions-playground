@@ -7,6 +7,14 @@ Best practices to follow when using GitHub Actions.
 - [Actions Documentation](https://docs.github.com/en/actions)
 - [Community Discussions](https://github.com/orgs/community/discussions/)
 
+# Billing
+
+## Minute Rounding
+GitHub [rounds](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#:~:text=GitHub%20rounds%20the%20minutes%20and%20partial%20minutes%20each%20job%20uses%20up%20to%20the%20nearest%20whole%20minute.) the minutes and partial minutes each job uses up to the nearest whole minute. This means reducing the number of jobs in your workflow will minimize rounding of minute usage and you should take into consideration how long a job will run.
+
+## [Spending limit](https://docs.github.com/en/billing/managing-billing-for-github-actions/managing-your-spending-limit-for-github-actions)
+If you care about money, you should definitely set up a budget.
+
 # Development
 
 ## [VSCode](https://code.visualstudio.com/)
@@ -97,6 +105,18 @@ jobs:
     steps:
       - name: Run a one-line script
         run: echo Hello, ${{ inputs.username }}!
+```
+
+## [Composite Actions](https://docs.github.com/en/actions/creating-actions/creating-a-composite-action)
+Use a composite action to combine(re-use) multiple steps.
+
+### Why?
+For the same reasons mentioned in [Reuse Workflows](#Reuse%20Workflows) but on a step level.
+
+### Example
+```yml
+runs:
+  using: "composite"
 ```
 
 ## Set timeouts
