@@ -1,0 +1,118 @@
+name: Max Steps
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
+      - uses: phwes/simple_hello_world@v1
