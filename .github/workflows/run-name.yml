@@ -1,4 +1,4 @@
-name: Basic
+name: Dynamic run name
 run-name: Deploy to ${{ inputs.deploy_target }} by @${{ github.actor }}
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
