@@ -4,6 +4,5 @@ on: workflow_dispatch
 
 jobs:
   build:
-    uses: ./.github/workflows/reusable-called.yml
-    with:
-      username: ${{ github.actor }}
+    uses: austenstone/.github/.github/workflows/dependabot-rebase-all.yml@main
+    
