@@ -1,11 +1,8 @@
 name: Reusable Call Bug
 
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 jobs:
   build:
-    uses: austenstone/.github/.github/workflows/dependabot-rebase-all.yml@main
+    uses: austenstone/.github/.github/workflows/dependabot-rebase-all.yml@v1
     
