@@ -1,0 +1,12 @@
+name: Reusable Call Bug
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: ./.github/workflows/reusable-called.yml
+    with:
+      username: ${{ github.actor }}
