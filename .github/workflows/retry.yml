@@ -13,7 +13,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: exit $((RANDOM % 2))
-      - run: gh run rerun ${{ github.run_id }} --failed
-        if: ${{ failure() }}
-        env:
-            GH_TOKEN: ${{ github.token }}
+      - uses: austenstone/.github/.github/workflows/rerun.yml@main
