@@ -13,3 +13,4 @@ jobs:
     steps:
       - run: exit $((RANDOM % 2))
       - run: gh run rerun ${{ github.run_id }} --failed
+        if: ${{ failure() }}
