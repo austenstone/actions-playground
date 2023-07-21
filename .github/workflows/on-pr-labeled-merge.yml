@@ -1,5 +1,5 @@
 # Merge pull request when label is added
-name: Basic
+name: On PR Label Merge
 
 # On pull request labeled
 on:
