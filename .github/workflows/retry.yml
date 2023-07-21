@@ -13,4 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: exit $((RANDOM % 2))
-      - uses: austenstone/.github/.github/workflows/rerun.yml@main
+      - uses: gh workflow run --repo austenstone/.github --branch main --file .github/workflows/rerun.yml -f run_id=$GITHUB_RUN_ID
+        env:
+            GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
+            GITHUB_RUN_ID: ${{ github.run_id }}
