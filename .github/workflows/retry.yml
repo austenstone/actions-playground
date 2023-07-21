@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v3
       - run: exit $((RANDOM % 2))
       - run: gh workflow run rerun.yml --repo austenstone/.github -f run_id=$GITHUB_RUN_ID
+        if: failure()
         env:
             GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
             GITHUB_RUN_ID: ${{ github.run_id }}
