@@ -1,0 +1,15 @@
+name: Expressions1
+
+on: workflow_dispatch
+
+jobs:
+  determine_files_changed:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test=true" >> "$GITHUB_OUTPUT"
+  build_alpha_tconnect:
+      needs: determine_files_changed
+      uses: ./.github/workflows/reusable-called.yml
+      with:
+        username: ${{ needs.determine_files_changed.outputs.test == 'true' }}
+      secrets: inherit
