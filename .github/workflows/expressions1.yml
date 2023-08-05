@@ -7,6 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "test=true" >> "$GITHUB_OUTPUT"
+  determine_files_changed_print:
+    needs: determine_files_changed
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ needs.determine_files_changed.outputs.test }}
   build_alpha_tconnect:
       needs: determine_files_changed
       uses: ./.github/workflows/reusable-called.yml
