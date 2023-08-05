@@ -6,18 +6,13 @@ jobs:
   determine_files_changed:
     runs-on: ubuntu-latest
     outputs:
-      test: ${{ steps.step1.outputs.test }}
+      build_protected: ${{ steps.step1.outputs.build_protected }}
     steps:
       - id: step1
-        run: echo "test=true" >> "$GITHUB_OUTPUT"
-  determine_files_changed_print:
-    needs: determine_files_changed
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{ needs.determine_files_changed.outputs.test }}
+        run: echo "build_protected=true" >> "$GITHUB_OUTPUT"
   build_alpha_tconnect:
       needs: determine_files_changed
       uses: ./.github/workflows/reusable-called.yml
       with:
-        username: ${{ needs.determine_files_changed.outputs.test == 'true' }}
+        username: ${{ needs.determine_files_changed.outputs.build_protected == 'true' }}
       secrets: inherit
