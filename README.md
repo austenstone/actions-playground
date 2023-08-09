@@ -1,6 +1,6 @@
 GitHub Actions makes automation easy!
 
-Improve the quality of your code and make your life more productive through the magic of devops!
+Improve the quality of your code and make your life more productive through devops!
 
 # [GitHub Actions](https://docs.github.com/en/actions)
 
