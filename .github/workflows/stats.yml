@@ -6,5 +6,5 @@ jobs:
    steps:
    - uses: runforesight/workflow-telemetry-action@v1
    - run: echo hello world
-   - run: apt-get install stress
+   - run: sudo apt-get install stress
    - run: stress
