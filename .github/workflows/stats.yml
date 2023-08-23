@@ -7,4 +7,4 @@ jobs:
    - uses: runforesight/workflow-telemetry-action@v1
    - run: echo hello world
    - run: sudo apt-get install stress
-   - run: stress
+   - run: stress --cpu 8 --io 4 --vm 2 --vm-bytes 128M --timeout 60s
