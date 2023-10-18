@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: build-env-2
-        run: echo "envs=[{ name:\ 'env1', url:\ 'https://env1.com' }, { name:\ 'env2', url:\ 'https://env2.com' }, { name:\ 'env3', url:\ 'https://env3.com' }]" >> "$GITHUB_OUTPUT"
+        run: echo "envs=[{ name:'env1', url:'https://env1.com' }, { name:'env2', url:'https://env2.com' }, { name:'env3', url:'https://env3.com' }]" >> "$GITHUB_OUTPUT"
     outputs:
       env-names: ${{ steps.build-env-2.outputs.envs }}
 
