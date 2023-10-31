@@ -18,7 +18,7 @@ jobs:
           repositories: ${{ env.REPOS }}
       - uses: actions/checkout@v3
         with:
-          repository: ${{join(env.REPOS)[0]}}
+          repository: private
           token: ${{ steps.app-token.outputs.token }}
           ref: ${{ github.head_ref }}
           # Make sure the value of GITHUB_TOKEN will not be persisted in repo's config
