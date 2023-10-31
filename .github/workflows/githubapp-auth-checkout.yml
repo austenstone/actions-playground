@@ -1,4 +1,4 @@
-name: Basic
+name: GitHub App Checkout
 on:
   workflow_dispatch:
 jobs:
