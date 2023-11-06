@@ -9,11 +9,10 @@ jobs:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          # required
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-          owner: austenstone
-          repositories: workflow-dispatch-sync
+          # owner: austenstone
+          # repositories: workflow-dispatch-sync
       - env:
           NPM_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
