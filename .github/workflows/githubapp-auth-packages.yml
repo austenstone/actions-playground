@@ -11,8 +11,8 @@ jobs:
         with:
           app-id: ${{ secrets.APPLICATION_ID }}
           private-key: ${{ secrets.APPLICATION_PRIVATE_KEY }}
-          # owner: austenstone
-          # repositories: workflow-dispatch-sync
+          owner: austenstone
+          repositories: workflow-dispatch-sync
       - env:
           NPM_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
