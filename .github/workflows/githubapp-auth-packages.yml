@@ -1,0 +1,25 @@
+name: GitHub App Checkout
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OWNER: austenstone
+      REPOS: workflow-dispatch-sync
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          # required
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: ${{ ENV.OWNER }}
+          repositories: ${{ env.REPOS }}
+      - env:
+          NPM_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          echo "@${OWNER}:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc
+          cat .npmrc
+      - run: npm install @austenstone/workflow-dispatch-sync@1.1.0
