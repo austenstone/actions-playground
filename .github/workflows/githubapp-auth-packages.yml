@@ -15,6 +15,7 @@ jobs:
           repositories: workflow-dispatch-sync
       - env:
           NPM_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: austenstone
         run: |
           echo "@${OWNER}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc
