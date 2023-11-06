@@ -1,12 +1,10 @@
-name: GitHub App Checkout
+name: GitHub App Packages
 on:
   workflow_dispatch:
+  push:
 jobs:
-  build:
+  get-package:
     runs-on: ubuntu-latest
-    env:
-      OWNER: austenstone
-      REPOS: workflow-dispatch-sync
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -14,8 +12,8 @@ jobs:
           # required
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-          owner: ${{ ENV.OWNER }}
-          repositories: ${{ env.REPOS }}
+          owner: austenstone
+          repositories: workflow-dispatch-sync
       - env:
           NPM_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
