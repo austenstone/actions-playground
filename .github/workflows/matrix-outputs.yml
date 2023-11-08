@@ -32,6 +32,8 @@ jobs:
     steps:
     - uses: actions/github-script@v4
       with:
-        script: console.log(process.env.result)
+        script: |
+          console.log('TESTING!')
+          console.log(process.env.result)
       env:
         result: ${{ toJson(needs.job1.outputs) }}
