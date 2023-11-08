@@ -12,18 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     outputs:
-      result: ${{ steps.step1.outputs.result }}
+      result: ${{ steps.step1.outputs }}
     strategy:
       fail-fast: false
       matrix:
         os: ['linux', 'windows','macos']
-        outcome: [1, 0]
     steps:
       - id: step1
         run: |
-          echo "result_${{ matrix.os }}_=${{ matrix.outcome }}" >> "$GITHUB_OUTPUT"
+          echo "result_${{ matrix.os }}_=abc123" >> "$GITHUB_OUTPUT"
   job2:
     runs-on: ubuntu-latest
     needs: job1
     steps:
-      - run: echo ${{ needs.job1.outputs.result }}
+      - run: echo ${{ needs.job1.outputs }}
