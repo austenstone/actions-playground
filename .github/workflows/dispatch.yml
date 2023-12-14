@@ -1,4 +1,4 @@
-name: Basic
+name: Dispatch
 on:
   workflow_dispatch:
     inputs:
