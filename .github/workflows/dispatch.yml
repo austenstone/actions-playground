@@ -1,0 +1,14 @@
+name: Basic
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: 'Text to display'
+        required: true
+        default: 'Hello, world!'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print text input
+        run: echo ${{ inputs.text }}
