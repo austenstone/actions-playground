@@ -11,13 +11,21 @@ jobs:
     steps:
     - uses: actions/github-script@v7
       id: is-work-hour
+      env:
+        WORKING_HOUR_START: 8
+        WORKING_HOUR_END: 18
+        WORKING_WEEK_START: 1
+        WORKING_WEEK_END: 5
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const date = new Date();
           const day = date.getDay();
           const hour = date.getHours();
-          const isWorkHour = day > 0 && day < 6 && hour > 8 && hour < 18;
+          const isWorkHour = day >= parseInt(process.env.WORKING_WEEK_START) &&
+            day <= parseInt(process.env.WORKING_WEEK_END) &&
+            hour >= parseInt(process.env.WORKING_HOUR_START) &&
+            hour <= parseInt(process.env.WORKING_HOUR_END);
           return {
             'is-work-hour': isWorkHour
           };
