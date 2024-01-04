@@ -29,10 +29,11 @@ jobs:
           return {
             'is-work-hour': isWorkHour
           };
+    - run: exit 1
+      if: steps.is-work-hour.outputs.is-work-hour != 'true'
   build:
     runs-on: ubuntu-latest
     needs: is-work-hour
-    if: needs.is-work-hour.outputs.is-work-hour == 'true'
     steps:
       - uses: actions/checkout@v3
       - name: Run a one-line script
