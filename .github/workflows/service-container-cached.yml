@@ -1,0 +1,29 @@
+name: Service Containers
+
+on: workflow_dispatch
+
+jobs:
+  container-job:
+    runs-on: ubuntu-latest
+
+    services:
+      nginx:
+        image: nginx
+        ports:
+          - 8080:80
+      
+    steps:
+      - run: mkdir -p ~/docker-image-cache
+      - id: docker-image-cache
+        uses: actions/cache@v1
+        with:
+            path: ~/docker-image-cache
+            key: docker-image-cache-${{ runner.os }}
+      - if: steps.image-cache.outputs.cache-hit != 'true'
+        run: |
+            docker pull nginx
+            docker save -o ~/image-cache/nginx.tar nginx
+      - if: steps.image-cache.outputs.cache-hit == 'true'
+        run: docker load -i ~/image-cache/nginx.tar
+      - run: sudo apt-get update && sudo apt-get install -y telnet
+      - run: telnet nginx 80
