@@ -1,4 +1,4 @@
-name: Container Service - Redis
+name: Service Containers
 
 on: workflow_dispatch
 
