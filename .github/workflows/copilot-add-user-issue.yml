@@ -6,8 +6,6 @@ on:
 jobs:
   add-comment:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     steps:
       - name: say hello
         if: contains(github.event.comment.body, '/add')
@@ -18,3 +16,5 @@ jobs:
             echo "adding $username"
             gh api -X PUT /repos/${{ github.repository }}/collaborators/$username
           done
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_TOKEN }}
