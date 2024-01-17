@@ -1,0 +1,20 @@
+name: Add Copilot User
+
+on:
+  issue_comment:                                     
+    types: [created, edited, deleted]
+jobs:
+  add-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: say hello
+        if: contains(github.event.comment.body, '/add')
+        run: |
+          echo "comment body: ${{ github.event.comment.body }}"
+          usernames=$(echo ${{ github.event.comment.body }} | cut -d' ' -f2)
+          for username in $(echo $usernames | tr "," "\n"); do
+            echo "adding $username"
+            gh api -X PUT /repos/${{ github.repository }}/collaborators/$username
+          done
