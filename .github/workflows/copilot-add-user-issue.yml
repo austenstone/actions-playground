@@ -1,14 +1,13 @@
 name: Add Copilot User
-
 on:
   issue_comment:                                     
     types: [created, edited, deleted]
+
 jobs:
   add-comment:
     runs-on: ubuntu-latest
     steps:
-      - name: say hello
-        if: contains(github.event.comment.body, '/add')
+      - if: contains(github.event.comment.body, '/add')
         run: |
           echo "comment body: ${{ github.event.comment.body }}"
           usernames=$(echo ${{ github.event.comment.body }} | cut -d' ' -f2)
