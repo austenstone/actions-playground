@@ -24,8 +24,8 @@ jobs:
       - if: steps.image-cache.outputs.cache-hit != 'true'
         run: |
             docker pull nginx
-            docker save -o ~/image-cache/nginx.tar nginx
+            docker save -o ~/docker-image-cache/nginx.tar nginx
       - if: steps.image-cache.outputs.cache-hit == 'true'
-        run: docker load -i ~/image-cache/nginx.tar
+        run: docker load -i ~/docker-image-cache/nginx.tar
       - run: sudo apt-get update && sudo apt-get install -y telnet
       - run: telnet nginx 80
