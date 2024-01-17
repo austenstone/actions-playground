@@ -1,6 +1,8 @@
-name: Service Containers
+name: Service Containers Cached
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
 
 jobs:
   container-job:
