@@ -25,9 +25,9 @@ jobs:
           done
         done
         
+        graph=$(echo -e "$graph" | head -n 500)
         echo -e '```mermaid
         gitGraph:
         '"${graph}"'
         ```
-        ' >> $GITHUB_STEP_SUMMARY
-        
+        '
