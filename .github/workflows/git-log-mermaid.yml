@@ -30,4 +30,4 @@ jobs:
         gitGraph:
         '"${graph}"'
         ```
-        '
+        ' >> $GITHUB_STEP_SUMMARY
