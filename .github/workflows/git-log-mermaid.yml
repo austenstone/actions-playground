@@ -40,4 +40,4 @@ jobs:
         done <<< "$git_log"
         
         # Output the diagram
-        echo -e $diagram >> $GITHUB_STEP_SUMMARY
+        echo -e "```mermaid\n$diagram```" >> $GITHUB_STEP_SUMMARY
