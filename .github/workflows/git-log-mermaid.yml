@@ -1,0 +1,43 @@
+name: Generate Mermaid Diagram
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-diagram:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Generate Mermaid Diagram
+      run: |
+        # Get git log with branch names
+        git_log=$(git log --pretty=format:'%h %d %p')
+        
+        # Start mermaid diagram
+        diagram="graph LR\n"
+        
+        # Parse git log and create mermaid diagram
+        while IFS= read -r line; do
+          commit=$(echo $line | awk '{print $1}')
+          branches=$(echo $line | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
+          parents=$(echo $line | awk '{for (i=3; i<=NF; i++) print $i}')
+          
+          # Print commit with branch names
+          if [ -z "$branches" ]
+          then
+            diagram+="    $commit\n"
+          else
+            diagram+="    $commit($branches)\n"
+          fi
+        
+          # Print edges
+          for parent in $parents; do
+            diagram+="    $parent --> $commit\n"
+          done
+        done <<< "$git_log"
+        
+        # Output the diagram
+        echo -e $diagram >> $GITHUB_STEP_SUMMARY
