@@ -8,7 +8,7 @@ on:
 env:
   ORG: octodemo
   GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
-  TOTAL_MINS_USED_ALERT_THRESHOLD: 50000
+  TOTAL_MINS_USED_ALERT_THRESHOLD: 1000
 
 jobs:
   build:
