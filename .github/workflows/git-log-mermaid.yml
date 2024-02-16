@@ -1,0 +1,33 @@
+name: Git Log Mermaid Diagram
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-diagram:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Generate Mermaid Diagram
+      run: |        
+        graph=""
+        for branch in $(git branch -a --format="%(refname:short)" | grep -v "main")
+        do
+          graph+="    branch $branch\n"
+          graph+="    checkout $branch\n"
+          for commit in $(git log --reverse --pretty=format:"%h" $branch)
+          do
+            graph+="    commit id: \"$commit\"\n"
+          done
+        done
+        
+        graph=$(echo -e "$graph" | head -n 500)
+        echo -e '```mermaid
+        gitGraph:
+        '"${graph}"'
+        ```
+        ' >> $GITHUB_STEP_SUMMARY
