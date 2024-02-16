@@ -8,7 +8,7 @@ on:
     - cron: '*/15 * * * *'
 env:
   ORG: octodemo
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
 
 jobs:
   build:
