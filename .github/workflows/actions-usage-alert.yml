@@ -3,6 +3,7 @@
 name: Basic
 
 on:
+  push:
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
@@ -16,4 +17,4 @@ jobs:
     steps:
       - run: echo "actions-billing=$(gh api /orgs/$ORG/settings/billing/actions)" >> "$GITHUB_OUTPUT"
         id: api
-      - run: echo ${{ toJson(steps.api.outputs.actions-billing) }}
+      - run: echo ${{ fromJson(steps.api.outputs.actions-billing).total_minutes_used }}
