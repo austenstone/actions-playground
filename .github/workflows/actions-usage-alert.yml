@@ -3,6 +3,7 @@
 name: Basic
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
 env:
