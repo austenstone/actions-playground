@@ -1,8 +1,6 @@
 name: Actions Usage Alert
 
 on:
-  push:
-  workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
 env:
