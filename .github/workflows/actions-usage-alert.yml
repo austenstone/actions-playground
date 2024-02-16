@@ -17,15 +17,9 @@ jobs:
       - run: echo "actions-billing=$(gh api /orgs/$ORG/settings/billing/actions)" >> "$GITHUB_OUTPUT"
         id: api
       - if: fromJson(steps.api.outputs.actions-billing).total_minutes_used >= env.TOTAL_MINS_USED_ALERT_THRESHOLD
-        name: Post to a Slack channel
-        id: slack
         uses: slackapi/slack-github-action@v1.25.0
         with:
-          # Slack channel id, channel name, or user id to post message.
-          # See also: https://api.slack.com/methods/chat.postMessage#channels
-          # You can pass in multiple channels to post to by providing a comma-delimited list of channel IDs.
           channel-id: 'CHANNEL_ID,ANOTHER_CHANNEL_ID'
-          # For posting a simple plain text message
           slack-message: "The total minutes used by the Actions in the $ORG organization has exceeded the threshold of $TOTAL_MINS_USED_ALERT_THRESHOLD. The current total minutes used is ${{fromJson(steps.api.outputs.actions-billing).total_minutes_used}}."
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
