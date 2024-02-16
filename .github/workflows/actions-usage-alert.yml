@@ -1,0 +1,18 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Basic
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+env:
+  ORG: octodemo
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "actions-billing=$(gh api /orgs/$ORG/settings/billing/actions)" >> "$GITHUB_OUTPUT"
+        id: api
+      - run: echo ${{ toJson(steps.api.outputs.actions-billing) }}
