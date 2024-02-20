@@ -1,0 +1,31 @@
+name: Hubbers popular repos
+description: A list of the most popular repositories from the Hubbers organization
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.AUSTEN_PAT }}
+          script: |
+            const { data: repos } = await github.repos.listForOrg({
+              org: 'octodemo',
+              type: 'public',
+              per_page: 100,
+            });
+
+            const sortedRepos = repos
+              .sort((a, b) => b.stargazers_count - a.stargazers_count)
+              .slice(0, 5);
+
+            const repoNames = sortedRepos.map((repo) => repo.name);
+
+            # Set the output as a job summary
+            console.log(`The most popular repos are: ${repoNames.join(', ')}`);
+            
