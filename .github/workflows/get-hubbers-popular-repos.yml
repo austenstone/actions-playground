@@ -16,14 +16,17 @@ jobs:
         with:
           github-token: ${{ secrets.AUSTEN_PAT }}
           script: |
-            // get all users in octodemo organization
             const org = 'octodemo';
-            const { data: users } = await github.orgs.listMembers({ org });
+            octokit.paginate("GET /orgs/{org}/members", {
+              org
+            });
 
             // get all repos for each user
             const repos = await Promise.all(
               users.map(async (user) => {
-                const { data: userRepos } = await github.repos.listForUser({ username: user.login });
+                const userRepos = await octokit.paginate("GET /users/{username}/repos", {
+                  username: user.login
+                });
                 return userRepos;
               })
             );
@@ -35,8 +38,6 @@ jobs:
             const sortedRepos = allRepos
               .sort((a, b) => b.stargazers_count - a.stargazers_count)
               .slice(0, 100);
-
-            console.log(JSON.stringify(sortedRepos, null, 2));
 
             const repoNames = sortedRepos.map((repo) => repo.name);
 
