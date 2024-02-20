@@ -3,9 +3,10 @@ name: On PR Label Merge
 
 # On pull request labeled
 on:
-  pull_request:
-    branches: [ "main" ]
-    types: [ labeled ]
+  workflow_dispatch:
+  # pull_request:
+  #   branches: [ "main" ]
+  #   types: [ labeled ]
 
 jobs:
   merge:

@@ -1,16 +1,22 @@
 name: Hubbers popular repos
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 1 * *'
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/get-hubbers-popular-repos.yml'
+    inputs:
+      org:
+        description: 'The GitHub organization to get the most popular repos for'
+        required: true
+        default: 'octodemo'
+  # push:
+  #   paths:
+  #     - '.github/workflows/get-hubbers-popular-repos.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      ORG: ${{ github.event.inputs.org || 'github' }}
     steps:
       - uses: actions/github-script@v7
         with:
@@ -30,15 +36,6 @@ jobs:
               console.log(`User ${user.login} has ${userRepos.length} repos`);
               allRepos.push(...userRepos);
             }
-
-            const repos = await Promise.all(
-              users.map(async (user) => {
-                const userRepos = await github.paginate("GET /users/{username}/repos", {
-                  username: user.login
-                });
-                return userRepos;
-              })
-            );
 
             // sort the repos by stargazers and get the top 100
             const sortedRepos = allRepos
