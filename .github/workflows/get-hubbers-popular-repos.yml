@@ -1,4 +1,4 @@
-name: Hubbers popular repos
+name: Org members popular public repos
 on:
   schedule:
     - cron: '0 0 1 * *'
@@ -40,7 +40,7 @@ jobs:
             // sort the repos by stargazers and get the top 100
             const sortedRepos = allRepos
               .sort((a, b) => b.stargazers_count - a.stargazers_count)
-              .slice(0, 100);
+              .slice(0, 1000);
 
             const repoNames = sortedRepos.map((repo) => repo.name);
 
