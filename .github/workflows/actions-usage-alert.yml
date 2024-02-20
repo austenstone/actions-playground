@@ -3,7 +3,7 @@ name: Actions Usage Alert
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 0 * * *'
 env:
   ORG: octodemo
   GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
