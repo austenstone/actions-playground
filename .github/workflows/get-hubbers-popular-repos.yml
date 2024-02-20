@@ -4,6 +4,8 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
   push:
+    paths:
+      - '.github/workflows/get-hubbers-popular-repos.yml'
 
 jobs:
   build:
@@ -14,15 +16,25 @@ jobs:
         with:
           github-token: ${{ secrets.AUSTEN_PAT }}
           script: |
-            const { data: repos } = await github.repos.listForOrg({
-              org: 'octodemo',
-              type: 'public',
-              per_page: 100,
-            });
+            // get all users in octodemo organization
+            const org = 'octodemo';
+            const { data: users } = await github.orgs.listMembers({ org });
 
-            const sortedRepos = repos
+            // get all repos for each user
+            const repos = await Promise.all(
+              users.map(async (user) => {
+                const { data: userRepos } = await github.repos.listForUser({ username: user.login });
+                return userRepos;
+              })
+            );
+
+            // flatten the array of arrays
+            const allRepos = repos.flat();
+
+            // sort the repos by stargazers and get the top 100
+            const sortedRepos = allRepos
               .sort((a, b) => b.stargazers_count - a.stargazers_count)
-              .slice(0, 5);
+              .slice(0, 100);
 
             const repoNames = sortedRepos.map((repo) => repo.name);
 
