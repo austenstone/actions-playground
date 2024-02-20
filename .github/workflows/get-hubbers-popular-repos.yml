@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  push:
 
 jobs:
   build:
@@ -25,5 +26,5 @@ jobs:
 
             const repoNames = sortedRepos.map((repo) => repo.name);
 
-            # Set the output as a job summary
+            // Set the output as a job summary
             console.log(`The most popular repos are: ${repoNames.join(', ')}`);
