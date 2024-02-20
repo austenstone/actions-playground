@@ -17,14 +17,14 @@ jobs:
           github-token: ${{ secrets.AUSTEN_PAT }}
           script: |
             const org = 'octodemo';
-            octokit.paginate("GET /orgs/{org}/members", {
+            github.paginate("GET /orgs/{org}/members", {
               org
             });
 
             // get all repos for each user
             const repos = await Promise.all(
               users.map(async (user) => {
-                const userRepos = await octokit.paginate("GET /users/{username}/repos", {
+                const userRepos = await github.paginate("GET /users/{username}/repos", {
                   username: user.login
                 });
                 return userRepos;
