@@ -17,7 +17,7 @@ jobs:
           github-token: ${{ secrets.AUSTEN_PAT }}
           script: |
             const org = 'octodemo';
-            github.paginate("GET /orgs/{org}/members", {
+            const { data: users } = await github.paginate("GET /orgs/{org}/members", {
               org
             });
 
