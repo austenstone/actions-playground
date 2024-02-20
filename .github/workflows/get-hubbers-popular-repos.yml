@@ -36,6 +36,8 @@ jobs:
               .sort((a, b) => b.stargazers_count - a.stargazers_count)
               .slice(0, 100);
 
+            console.log(JSON.stringify(sortedRepos, null, 2));
+
             const repoNames = sortedRepos.map((repo) => repo.name);
 
             // Set the output as a job summary
