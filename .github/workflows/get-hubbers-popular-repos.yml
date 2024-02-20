@@ -1,5 +1,4 @@
 name: Hubbers popular repos
-description: A list of the most popular repositories from the Hubbers organization
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -28,4 +27,3 @@ jobs:
 
             # Set the output as a job summary
             console.log(`The most popular repos are: ${repoNames.join(', ')}`);
-            
