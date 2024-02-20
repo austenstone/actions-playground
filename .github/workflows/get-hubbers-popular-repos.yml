@@ -21,7 +21,16 @@ jobs:
               org
             });
 
-            // get all repos for each user
+            // get all repos for each user sequentially
+            allRepos = [];
+            for (const user of users) {
+              const userRepos = await github.paginate("GET /users/{username}/repos", {
+                username: user.login
+              });
+              console.log(`User ${user.login} has ${userRepos.length} repos`);
+              allRepos.push(...userRepos);
+            }
+
             const repos = await Promise.all(
               users.map(async (user) => {
                 const userRepos = await github.paginate("GET /users/{username}/repos", {
@@ -30,9 +39,6 @@ jobs:
                 return userRepos;
               })
             );
-
-            // flatten the array of arrays
-            const allRepos = repos.flat();
 
             // sort the repos by stargazers and get the top 100
             const sortedRepos = allRepos
