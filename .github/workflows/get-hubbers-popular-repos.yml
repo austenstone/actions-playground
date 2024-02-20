@@ -52,7 +52,6 @@ jobs:
             ];
 
             // Set the output as a job summary
-            console.log(`The most popular repos are: ${repoNames.join(', ')}`);
             await core.summary
               .addHeading('Most Popular Repos')
               .addTable(repoTable)
