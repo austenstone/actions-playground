@@ -46,6 +46,6 @@ jobs:
               .addHeading('Most Popular Repos')
               .addTable([
                 [{data: 'Repo Name', header: true}, {data: 'Stars', header: true}],
-                ...sortedRepos.map((repo) => [`[${repo.name}](${repo.html_url})`, JSON.stringify(repo.stargazers_count)]),
+                ...sortedRepos.map((repo) => [`\n\n[${repo.name}](${repo.html_url})`, JSON.stringify(repo.stargazers_count)]),
               ])
               .write();
