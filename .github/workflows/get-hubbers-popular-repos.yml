@@ -28,3 +28,10 @@ jobs:
 
             // Set the output as a job summary
             console.log(`The most popular repos are: ${repoNames.join(', ')}`);
+            await core.summary
+              .addHeading('Most Popular Repos')
+              .addTable([
+                [{data: 'Repo Name', header: true}, {data: 'Stars', header: true}],
+                ...sortedRepos.map((repo) => [repo.name, repo.stargazers_count]),
+              ])
+              .write();
