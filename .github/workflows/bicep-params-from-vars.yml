@@ -1,0 +1,21 @@
+name: Bicep Params from Vars
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Bicep parameters file
+        env:
+          VARS: ${{ toJSON(vars) }}
+        run: |
+          echo "$VARS" | jq -r 'to_entries[] | "// param \(.key) <type>\nparam \(.key) string = \"\(.value)\""' >> params.bicep
+      - run: cat params.bicep
+      - name: Archive Bicep parameters file
+        uses: actions/upload-artifact@v2
+        with:
+          name: params
+          path: params.bicep
