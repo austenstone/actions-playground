@@ -12,7 +12,7 @@ jobs:
         env:
           VARS: ${{ toJSON(vars) }}
         run: |
-          echo "$VARS" | jq -r 'to_entries[] | "// param \(.key) <type>\nparam \(.key) string = \"\(.value)\""' >> params.bicep
+          echo "$VARS" | jq -r 'to_entries[] | "// param \(.key) string = \"\(.value)\""' >> params.bicep
       - run: cat params.bicep
       - name: Archive Bicep parameters file
         uses: actions/upload-artifact@v4
