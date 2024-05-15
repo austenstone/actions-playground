@@ -1,0 +1,34 @@
+name: Usage
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await core.summary
+              .addHeading('Test Results')
+              .addTable([
+                [{data: 'File', header: true}, {data: 'Result', header: true}],
+                ['foo.js', 'Pass ✅'],
+                ['bar.js', 'Fail ❌'],
+                ['test.js', 'Pass ✅']
+              ])
+              .addLink('View staging deployment!', 'https://github.com')
+              .write()
+      - uses: austenstone/job-summary@main
+        id: usage
+        with:
+          name: job-summary
+          create-pdf-artifact: false
+          create-md-artifact: false
+      - run: echo "${{ steps.usage.outputs.job-summary }}"
+      - run: cat "${{ steps.usage.outputs.md-file }}"
+      - run: cat "${{ steps.usage.outputs.pdf-file }}"
+      - run: cat "${{ steps.usage.outputs.html-file }}"
