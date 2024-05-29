@@ -7,6 +7,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: foo
-        uses: austenstone/actions-playground/.github/actions/composite-action@v1
+        uses: austenstone/actions-playground/.github/actions/composite-action@main
         with:
           who-to-greet: 'Mona the Octocat'
