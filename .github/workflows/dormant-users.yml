@@ -8,7 +8,7 @@ jobs:
         id: analyze_user_activity
         uses: peter-murray/inactive-users-action@v1
         with:
-          token: ${{ secrets.ORGANIZATION_AND_REPO_ACCESS_TOKEN }}
+          token: ${{ secrets.AUSTEN_PAT }}
           organization: octodemo
           activity_days: 90
       
