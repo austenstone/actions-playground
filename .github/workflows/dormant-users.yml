@@ -6,7 +6,7 @@ jobs:
     steps:
       - name: Analyze User Activity
         id: analyze_user_activity
-        uses: peter-murray/inactive-users-action@v1
+        uses: peter-murray/inactive-users-action@main
         with:
           token: ${{ secrets.AUSTEN_PAT }}
           organization: octodemo
