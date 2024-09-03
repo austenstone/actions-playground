@@ -1,0 +1,9 @@
+name: Get CPU Info
+
+on: workflow_dispatch
+
+jobs:
+  lscpu:
+    runs-on: ubuntu-latest
+    steps:
+      - run: lscpu
