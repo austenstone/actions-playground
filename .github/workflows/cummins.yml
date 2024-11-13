@@ -8,9 +8,12 @@ on:
 
 jobs:
   run1:
+    strategy:
+      matrix:
+        foo: ['1.0', '2.0', '3.0']
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Hello from a workflow!"
+      - run: echo "The version is ${{ matrix.foo }}"
 
   run2:
     runs-on: ubuntu-latest
