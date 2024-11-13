@@ -1,4 +1,10 @@
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      who-to-greet:
+        description: 'Who to greet'
+        required: true
+        default: 'Mona the Octocat'
 
 jobs:
   hello_world_job:
@@ -9,4 +15,4 @@ jobs:
       - id: foo
         uses: austenstone/actions-playground/.github/actions/composite-action@main
         with:
-          who-to-greet: 'Mona the Octocat'
+          who-to-greet: ${{ github.event.inputs.who-to-greet }}
