@@ -21,8 +21,13 @@ jobs:
     steps:
       - run: echo "The version is ${{ matrix.foo }}"
 
-  run2:
+  deploy:
     needs: run1
+    environment:
+      name: production
+      url: 'http://localhost'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Hello from a workflow!"
+      - run: echo "Hello from a ${{ vars.NAME }}!"
+      - run: echo "Hello from a ${{ secrets.SUPER_SECRET }}!"
+    timeout-minutes: 10
