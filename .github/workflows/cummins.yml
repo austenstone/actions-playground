@@ -7,14 +7,12 @@ on:
       - main
 
 jobs:
-  pr-comment:
+  run1:
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'Merge')
     steps:
-      - uses: actions/checkout@v3
       - run: echo "Hello from a workflow!"
-      - uses: austenstone/list-repository-languages@main
-        id: list-languages
-      - run: gh pr comment ${{ github.event.pull_request.number }} --body "It's been labeled"
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+  run2:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello from a workflow!"
