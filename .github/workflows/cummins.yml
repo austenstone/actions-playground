@@ -10,6 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: echo "Hello from a workflow!"
-      - run: gh pr comment ${{ github.event.pull_request.number }} --body "Hello from a workflow!"
+      - uses: austenstone/list-repository-languages@main
+        id: list-languages
+      - run: gh pr comment ${{ github.event.pull_request.number }} --body "The languages are: ${{ steps.list-languages.outputs.languages }}"
         env:
           GH_TOKEN: ${{ github.token }}
