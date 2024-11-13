@@ -2,6 +2,7 @@ on:
   label:
     types: [created, deleted]
   workflow_dispatch:
+  push:
   pull_request:
     branches:
       - main
@@ -16,6 +17,7 @@ jobs:
       - run: echo "The version is ${{ matrix.foo }}"
 
   run2:
+    needs: run1
     runs-on: ubuntu-latest
     steps:
       - run: echo "Hello from a workflow!"
