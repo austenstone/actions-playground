@@ -13,21 +13,12 @@ on:
       - main
 
 jobs:
-  run1:
+  build:
     strategy:
       matrix:
         foo: ['1.0', '2.0', '3.0']
     runs-on: ubuntu-latest
     steps:
-      - run: echo "The version is ${{ matrix.foo }}"
-
-  deploy:
-    needs: run1
-    environment:
-      name: production
-      url: 'http://localhost'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Hello from a ${{ vars.NAME }}!"
-      - run: echo "Hello from a ${{ secrets.SUPER_SECRET }}!"
-    timeout-minutes: 10
+      - run: echo "1"
+      - run: echo "2"
+      - run: echo "3"
