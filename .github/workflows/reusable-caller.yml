@@ -2,8 +2,24 @@ name: Reusable Call
 
 on: workflow_dispatch
 
+permissions:
+  issues: write
+  pull-requests: write
+  checks: write
+  actions: write
+  packages: write
+  discussions: write
+  security-events: write
+  deployments: write
+
 jobs:
   build:
     uses: ./.github/workflows/reusable-called.yml
     with:
       username: ${{ github.actor }}
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run reusable-called.yml --inputs username=octocat
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
