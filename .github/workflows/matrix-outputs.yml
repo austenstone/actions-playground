@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     outputs:
-      result: ${{ toJson(matrix) }}
+      result: ${{ toJson(steps) }}
     strategy:
       fail-fast: false
       matrix:
