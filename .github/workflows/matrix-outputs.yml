@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     outputs:
-      result: steps.step1.outputs
+      result: ${{ toJson(steps.step1.outputs) }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,4 +38,4 @@ jobs:
         script: |
           console.log(process.env.result)
       env:
-        result: ${{ toJson(needs.job1.outputs) }}
+        result: ${{ fromJson(needs.job1.outputs) }}
