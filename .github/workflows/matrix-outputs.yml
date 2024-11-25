@@ -8,11 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  job1:
+  matrix-job:
     runs-on: ubuntu-latest
     continue-on-error: true
-    outputs:
-      result: ${{ toJson(steps.step1.outputs) }}
+    outputs: ${{ fromJson(steps.step1.outputs) }}
     strategy:
       fail-fast: false
       matrix:
@@ -26,20 +25,18 @@ jobs:
           echo "${{ matrix.os }}_random_string=$RANDOM_STRING" >> "$GITHUB_OUTPUT"
   job2:
     runs-on: ubuntu-latest
-    needs: job1
+    needs: matrix-job
     steps:
-      - run: echo "${{ toJson(needs.job1.outputs) }}"
-      - run: echo "${{ toJson(needs.job1.outputs) }}"
-      - run: echo "${{ toJson(needs.job1.outputs) }}"
+      - run: echo "${{ toJson(needs.matrix-job.outputs) }}"
     env:
-      result: needs.job1.outputs
+      result: needs.matrix-job.outputs
   # job3:
   #   runs-on: ubuntu-latest
-  #   needs: job1
+  #   needs: matrix-job
   #   steps:
   #   - uses: actions/github-script@v4
   #     with:
   #       script: |
   #         console.log(process.env.result)
   #     env:
-  #       result: needs.job1.outputs
+  #       result: needs.matrix-job.outputs
