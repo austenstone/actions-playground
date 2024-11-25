@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     outputs:
-      result: ${{ toJson(steps.step1.outputs) }}
+      result: steps.step1.outputs
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +33,6 @@ jobs:
     - uses: actions/github-script@v4
       with:
         script: |
-          console.log('TESTING!')
           console.log(process.env.result)
       env:
         result: ${{ toJson(needs.job1.outputs) }}
