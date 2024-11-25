@@ -38,4 +38,4 @@ jobs:
         script: |
           console.log(process.env.result)
       env:
-        result: ${{ fromJson(needs.job1.outputs) }}
+        result: needs.job1.outputs
