@@ -5,6 +5,7 @@ on: workflow_dispatch
 jobs:
   create-and-upload:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Create Artifact
         run: echo 'Hello, World!' > my_file.txt
