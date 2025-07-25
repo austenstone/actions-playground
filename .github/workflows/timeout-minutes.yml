@@ -1,0 +1,22 @@
+name: Timeout Minutes
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    timeout-minutes: 0.1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo Hello, world!
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
