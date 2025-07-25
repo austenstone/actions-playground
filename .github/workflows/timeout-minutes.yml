@@ -12,8 +12,7 @@ jobs:
     timeout-minutes: 0.1
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: echo Hello, world!
+      - run:  sleep 60
   test:
     runs-on: ubuntu-latest
     steps:
