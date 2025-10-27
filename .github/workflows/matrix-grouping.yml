@@ -61,7 +61,8 @@ jobs:
   ml-benchmarks:
     needs: generate-configs
     # runs-on: ${{ matrix.config.runner }}
-    name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
+    # name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
+    name: 🧠 ML Benchmark
     strategy:
       fail-fast: false
       matrix:
