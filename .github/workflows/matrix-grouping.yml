@@ -62,7 +62,7 @@ jobs:
     needs: generate-configs
     # runs-on: ${{ matrix.config.runner }}
     # name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
-    name: 🧠 ML Benchmark
+    name: This job name is sooooo long that will actually truncate the end of the job name causing things to get grouped incorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectly
     strategy:
       fail-fast: false
       matrix:
