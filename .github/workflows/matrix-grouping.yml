@@ -60,11 +60,21 @@ jobs:
 
   ml-benchmarks:
     needs: generate-configs
-    runs-on: ${{ matrix.config.runner }}
+    # runs-on: ${{ matrix.config.runner }}
     name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
     strategy:
       fail-fast: false
       matrix:
         config: ${{ fromJson(needs.generate-configs.outputs.benchmark-configs) }}
-    steps:
-      - run: echo '${{ toJSON(matrix.config) }}'
+    uses: ./.github/workflows/matrix-grouping-nested.yml
+    with:
+      runner: ${{ matrix.config.runner }}
+      framework: ${{ matrix.config.framework }}
+      model: ${{ matrix.config.model }}
+      precision: ${{ matrix.config.precision }}
+      batch_size: ${{ matrix.config.batch_size }}
+      sequence_length: ${{ matrix.config.sequence_length }}
+      devices: ${{ matrix.config.devices }}
+      backend: ${{ matrix.config.backend }}
+    # steps:
+    #   - run: echo '${{ toJSON(matrix.config) }}'
