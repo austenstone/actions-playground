@@ -7,60 +7,56 @@ jobs:
   generate-configs:
     runs-on: ubuntu-latest
     outputs:
-      benchmark-configs: ${{ steps.generate.outputs.benchmark-configs }}
-      test-configs: ${{ steps.generate.outputs.test-configs }}
+      benchmark-configs: ${{ steps.generate.outputs.result }}
     steps:
       - name: Generate benchmark configurations
         id: generate
-        run: |
-          # Generate complex benchmark matrix similar to GPT-OSS example
-          BENCHMARK_CONFIG='[
-            {
-              "runner": "ubuntu-latest",
-              "framework": "pytorch", 
-              "model": "gpt-small-117m",
-              "precision": "fp16",
-              "batch_size": 8,
-              "sequence_length": 512,
-              "devices": 1,
-              "backend": "cpu"
-            },
-            {
-              "runner": "ubuntu-latest", 
-              "framework": "pytorch",
-              "model": "gpt-small-117m", 
-              "precision": "fp32",
-              "batch_size": 16,
-              "sequence_length": 1024,
-              "devices": 1,
-              "backend": "cpu"
-            },
-            {
-              "runner": "ubuntu-latest",
-              "framework": "tensorflow",
-              "model": "bert-base-uncased",
-              "precision": "fp16", 
-              "batch_size": 32,
-              "sequence_length": 256,
-              "devices": 1,
-              "backend": "cpu"
-            },
-            {
-              "runner": "ubuntu-latest",
-              "framework": "tensorflow",
-              "model": "bert-base-uncased",
-              "precision": "fp32",
-              "batch_size": 64, 
-              "sequence_length": 512,
-              "devices": 1,
-              "backend": "cpu"
-            }
-          ]'
-          
-          echo "benchmark-configs=$BENCHMARK_CONFIG" >> $GITHUB_OUTPUT
-          
-          echo "Generated benchmark configs:"
-          echo "$BENCHMARK_CONFIG" | jq '.'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const benchmarkConfigs = [
+              {
+                runner: "ubuntu-latest",
+                framework: "pytorch", 
+                model: "gpt-small-117m",
+                precision: "fp16",
+                batch_size: 8,
+                sequence_length: 512,
+                devices: 1,
+                backend: "cpu"
+              },
+              {
+                runner: "ubuntu-latest", 
+                framework: "pytorch",
+                model: "gpt-small-117m", 
+                precision: "fp32",
+                batch_size: 16,
+                sequence_length: 1024,
+                devices: 1,
+                backend: "cpu"
+              },
+              {
+                runner: "ubuntu-latest",
+                framework: "tensorflow",
+                model: "bert-base-uncased",
+                precision: "fp16", 
+                batch_size: 32,
+                sequence_length: 256,
+                devices: 1,
+                backend: "cpu"
+              },
+              {
+                runner: "ubuntu-latest",
+                framework: "tensorflow",
+                model: "bert-base-uncased",
+                precision: "fp32",
+                batch_size: 64, 
+                sequence_length: 512,
+                devices: 1,
+                backend: "cpu"
+              }
+            ];
+            return benchmarkConfigs;
 
   ml-benchmarks:
     needs: generate-configs
