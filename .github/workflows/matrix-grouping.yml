@@ -1,0 +1,74 @@
+name: Matrix Grouping Demo
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  generate-configs:
+    runs-on: ubuntu-latest
+    outputs:
+      benchmark-configs: ${{ steps.generate.outputs.benchmark-configs }}
+      test-configs: ${{ steps.generate.outputs.test-configs }}
+    steps:
+      - name: Generate benchmark configurations
+        id: generate
+        run: |
+          # Generate complex benchmark matrix similar to GPT-OSS example
+          BENCHMARK_CONFIG='[
+            {
+              "runner": "ubuntu-latest",
+              "framework": "pytorch", 
+              "model": "gpt-small-117m",
+              "precision": "fp16",
+              "batch_size": 8,
+              "sequence_length": 512,
+              "devices": 1,
+              "backend": "cpu"
+            },
+            {
+              "runner": "ubuntu-latest", 
+              "framework": "pytorch",
+              "model": "gpt-small-117m", 
+              "precision": "fp32",
+              "batch_size": 16,
+              "sequence_length": 1024,
+              "devices": 1,
+              "backend": "cpu"
+            },
+            {
+              "runner": "ubuntu-latest",
+              "framework": "tensorflow",
+              "model": "bert-base-uncased",
+              "precision": "fp16", 
+              "batch_size": 32,
+              "sequence_length": 256,
+              "devices": 1,
+              "backend": "cpu"
+            },
+            {
+              "runner": "ubuntu-latest",
+              "framework": "tensorflow",
+              "model": "bert-base-uncased",
+              "precision": "fp32",
+              "batch_size": 64, 
+              "sequence_length": 512,
+              "devices": 1,
+              "backend": "cpu"
+            }
+          ]'
+          
+          echo "benchmark-configs=$BENCHMARK_CONFIG" >> $GITHUB_OUTPUT
+          
+          echo "Generated benchmark configs:"
+          echo "$BENCHMARK_CONFIG" | jq '.'
+
+  ml-benchmarks:
+    needs: generate-configs
+    runs-on: ${{ matrix.config.runner }}
+    name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJson(needs.generate-configs.outputs.benchmark-configs) }}
+    steps:
+      - run: echo '${{ toJSON(matrix.config) }}'
