@@ -1,0 +1,60 @@
+name: Matrix Grouping Demo
+
+on: 
+  workflow_call:
+    inputs:
+      runner:
+        description: 'Runner type for the job'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      framework:
+        description: 'ML framework to use (pytorch, tensorflow)'
+        required: false
+        type: string
+        default: 'pytorch'
+      model:
+        description: 'Model to use for training/inference'
+        required: false
+        type: string
+        default: 'gpt-small-117m'
+      precision:
+        description: 'Precision type (fp16, fp32)'
+        required: false
+        type: string
+        default: 'fp32'
+      batch_size:
+        description: 'Batch size for training/inference'
+        required: false
+        type: number
+        default: 16
+      sequence_length:
+        description: 'Sequence length for model input'
+        required: false
+        type: number
+        default: 512
+      devices:
+        description: 'Number of devices to use'
+        required: false
+        type: number
+        default: 1
+      backend:
+        description: 'Backend to use (cpu, gpu, cuda)'
+        required: false
+        type: string
+        default: 'cpu'
+
+jobs:
+  generate-configs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print all individual inputs
+        run: |
+          echo "Runner: ${{ inputs.runner }}"
+          echo "Framework: ${{ inputs.framework }}"
+          echo "Model: ${{ inputs.model }}"
+          echo "Precision: ${{ inputs.precision }}"
+          echo "Batch Size: ${{ inputs.batch_size }}"
+          echo "Sequence Length: ${{ inputs.sequence_length }}"
+          echo "Devices: ${{ inputs.devices }}"
+          echo "Backend: ${{ inputs.backend }}"
