@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Generate benchmark configurations
         id: generate
-        uses: actions/github-script@v7
+        uses: austenstone/action-typescript@main
         with:
           script: |
             const benchmarkConfigs = [
@@ -60,9 +60,8 @@ jobs:
 
   ml-benchmarks:
     needs: generate-configs
-    # runs-on: ${{ matrix.config.runner }}
     # name: 🧠 ML Benchmark (${{ matrix.config.framework }}, ${{ matrix.config.model }}, ${{ matrix.config.precision }})
-    name: This job name is sooooo long that will actually truncate the end of the job name causing things to get grouped incorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectlyincorrectly
+    name: This job name is sooooo long 
     strategy:
       fail-fast: false
       matrix:
