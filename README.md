@@ -7,19 +7,20 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 
 # Resources
 
-## Learn
-
+### ⭐ Important GitHub Resources
 - [GitHub Documentation](https://docs.github.com/en/actions) - The official documentation for GitHub Actions. This is the best place to start learning about all the features and capabilities.
 - [GitHub Blog](https://github.blog/tag/github-actions) - Official blog posts and announcements related to GitHub Actions.
 - [Changelog](https://github.blog/changelog/2025/?label=actions) - Latest updates and improvements to GitHub Actions.
+- [GitHub Actions Community Forum](https://github.com/orgs/community/discussions/) - A place to discuss and get help with GitHub Actions.
+- [GitHub Marketplace](https://github.com/marketplace) - A marketplace for GitHub Actions and other tools.
 
-### Courses
+### 🎓 Courses
 - [GitHub Skills](https://skills.github.com/#automate-workflows-with-github-actions) - Interactive courses to learn GitHub Actions by doing.
 - [GitHub Learn](https://learn.github.com/learning?product=GitHub+Actions) - Curated courses from top learning platforms.
 - [Microsoft Training](https://learn.microsoft.com/en-us/training/browse/?products=github&terms=actions) - Official Microsoft training paths and modules.
 - [Udemy Course](https://www.udemy.com/course/github-actions-the-complete-guide/?srsltid=AfmBOoq0BlmNUaRMlUDmisGAxSrKjrvjALt9-7k3QCsTPHiAs0LMixYX) - Comprehensive video tutorials.
 
-### Videos
+### 📺 Videos
 - [GitHub: What is GitHub Actions?](https://www.youtube.com/watch?v=URmeTqglS58) - High level overview of GitHub Actions. (60 seconds)
 - [Fireship: How GitHub Actions 10x my productivity](https://www.youtube.com/watch?v=yfBtjLxn_6k) - A quick tutorial. (8 mins)
 - [Fireship: 5 Ways to DevOps-ify your App](https://www.youtube.com/watch?v=eB0nUzAI7M8&t=512s) - Five easy ways to automate your software development process with Github Actions. (12 mins)
@@ -30,11 +31,28 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 - [glitch.stream: GitHub Actions: The Full Course](https://www.youtube.com/watch?v=-hVG9z0fCac&list=PLArH6NjfKsUhvGHrpag7SuPumMzQRhUKY) - A series of videos by Bassem @GitHub (8 hours)
 - [Mickey Gousset: GitHub Actions](https://www.youtube.com/watch?v=5XfgT9A9PHw&list=PLiO7XHcmTsleGRnjT2o0ILzXUkzFJ87eR) - A series of videos by Mickey Gousset focused on a variety of GitHub Actions topics. (5 hours)
 
-### Sales
-- [Sales Page](https://github.com/features/actions)
-- [Pricing Details](https://github.com/features/actions#pricing-details)
+### 🤔 Why Actions?
+- [Stop re-writing pipelines! Why GitHub Actions drive the future of CI/CD](https://www.codecentric.de/en/knowledge-hub/blog/github-actions-nextgen-cicd) - An in-depth look at the advantages of using GitHub Actions for CI/CD.
+
+### 🚚 Migrations
+- [Migrate to GitHub Actions](https://docs.github.com/en/actions/tutorials/migrate-to-github-actions) - Official migration guide.
+- [The journey from CircleCI to GitHub Actions](https://evilmartians.com/chronicles/journey-from-circleci-to-github-actions) - Evil Martians discuss migration
+- [PyTorch dev podcast](https://pytorch-dev-podcast.simplecast.com/episodes/new-ci-uTFBJiq_) - PyTorch moved all of its CI from CircleCI to GitHub Actions.
+
+### 🌍 Community Actions & Related Libraries
+- [Awesome Actions](https://github.com/sdras/awesome-actions) - A curated list of awesome actions to use in your workflows.
+- [GitHub Actions Toolkit](https://github.com/actions/toolkit) - Official toolkit for building GitHub Actions.
+- [GitHub Actions Starter Workflows](https://github.com/actions/starter-workflows) - A collection of starter workflows for common use cases.
+- [typescript-action](https://github.com/actions/typescript-action) - A template for creating GitHub Actions with TypeScript.
+- [javascript-action](https://github.com/actions/javascript-action) - A template for creating GitHub Actions with JavaScript.
+- [container-action](https://github.com/actions/container-action) - A template for creating GitHub Actions with Docker containers.
+
+### 💼 Sales
+- [Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
+- [GitHub vs. other DevOps Tools](https://resources.github.com/devops/tools/compare/)
 - [GitHub Actions Customer Stories](https://github.com/customer-stories/enterprise?feature=GitHub%2BActions#browse) - Real-world examples of how organizations use GitHub Actions to automate their workflows.
 - [Services: GitHub Actions Training](https://github.com/services/actions-training) - Paid expert-led training sessions.
+- [Sales Page](https://github.com/features/actions)
 
 ## Definitions
 
