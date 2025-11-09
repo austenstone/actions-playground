@@ -56,7 +56,7 @@ This repository serves as a comprehensive collection of resources and examples d
 - [nektos/act](https://github.com/nektos/act) - Run your GitHub Actions locally.
 - [Step Security](https://www.stepsecurity.io/github-actions-and-stepsecurity) - Security tools for GitHub Actions.
 
-### Runners & Infrastructure
+### 🖥️ Runners & Infrastructure
 - [actions/partner-runner-images](https://github.com/actions/partner-runner-images) - Partner runner images for GitHub Actions.
 - [actions/runner](https://github.com/actions/runner) - The GitHub Actions runner.
 - [actions/runner-images](https://github.com/actions/runner-images) - Official runner images for GitHub Actions.
