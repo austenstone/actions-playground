@@ -58,6 +58,14 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 - [typescript-action](https://github.com/actions/typescript-action) - A template for creating GitHub Actions with TypeScript.
 - [javascript-action](https://github.com/actions/javascript-action) - A template for creating GitHub Actions with JavaScript.
 - [container-action](https://github.com/actions/container-action) - A template for creating GitHub Actions with Docker containers.
+- [nektos/act](https://github.com/nektos/act) - Run your GitHub Actions locally.
+- [Step Security](https://www.stepsecurity.io/github-actions-and-stepsecurity) - Security tools for GitHub Actions.
+
+### Runners & Infrastructure
+- [actions/partner-runner-images](https://github.com/actions/partner-runner-images) - Partner runner images for GitHub Actions.
+- [actions/runner](https://github.com/actions/runner) - The GitHub Actions runner.
+- [actions/runner-images](https://github.com/actions/runner-images) - Official runner images for GitHub Actions.
+- [actions/actions-runner-controller](https://github.com/actions/actions-runner-controller) - Kubernetes controller to manage self-hosted runners.
 
 ### 💼 Sales
 - [Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
