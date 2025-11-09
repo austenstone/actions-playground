@@ -18,28 +18,19 @@ permissions:
   issues: write         # Create/update issues
 
 jobs:
-  # =====================================
-  # Default Permissions
-  # =====================================
   default-permissions:
-    name: Default Permissions
     runs-on: ubuntu-latest
-    
+    # Default permissions are granted when none are specified
     steps:
       - uses: actions/checkout@v4
-      
       - name: Test Default Access
         run: |
           echo "Can read repo contents (inherited from workflow)"
           gh api /repos/${{ github.repository }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # The token GITHUB_TOKEN is effected by 'permissions'
 
-  # =====================================
-  # Override Permissions
-  # =====================================
   override-permissions:
-    name: Override Job Permissions
     runs-on: ubuntu-latest
     
     # Job-level permissions override workflow-level
@@ -55,9 +46,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # =====================================
   # Restrictive Permissions
-  # =====================================
   no-permissions:
     name: No Permissions
     runs-on: ubuntu-latest
@@ -71,15 +60,12 @@ jobs:
           echo "This job has no GitHub API access"
           echo "Useful for untrusted code or when no API calls needed"
 
-  # =====================================
-  # Read-Only Permissions
-  # =====================================
   read-only:
     name: Read-Only Access
     runs-on: ubuntu-latest
     
     permissions:
-      contents: read
+      contents: read # Read only permissions (best practice)
     
     steps:
       - uses: actions/checkout@v4
@@ -91,9 +77,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # =====================================
-  # Write Permissions
-  # =====================================
   write-access:
     name: Write Access
     runs-on: ubuntu-latest
@@ -110,39 +93,28 @@ jobs:
       - name: Write Operations
         run: |
           echo "Can perform write operations"
-          # Example: Create a tag
           # git tag v1.0.0
           # git push origin v1.0.0
 
-  # =====================================
   # ID Token Permission (OIDC)
-  # =====================================
   oidc-token:
     name: OIDC Token Access
     runs-on: ubuntu-latest
-    if: false # Disabled - enable when needed
     
     permissions:
       id-token: write  # Request OIDC JWT token
       contents: read
     
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::123456789012:role/MyRole
           aws-region: us-east-1
-      
-      - name: Access AWS
-        run: aws sts get-caller-identity
+      - run: aws sts get-caller-identity
 
-  # =====================================
-  # Package Permissions
-  # =====================================
   packages:
     name: Package Registry Access
     runs-on: ubuntu-latest
-    if: false # Disabled - enable when publishing packages
     
     permissions:
       contents: read
@@ -150,38 +122,13 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Login to GitHub Container Registry
-        run: |
+      - run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      
-      - name: Build and Push
-        run: |
+      - run: |
           docker build -t ghcr.io/${{ github.repository }}:latest .
           docker push ghcr.io/${{ github.repository }}:latest
 
-  # =====================================
-  # Deployment Permissions
-  # =====================================
-  deploy:
-    name: Deployment Access
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    permissions:
-      contents: read
-      deployments: write  # Create deployment status
-    
-    environment:
-      name: production
-    
-    steps:
-      - name: Deploy Application
-        run: echo "Deploying with deployment permissions"
-
-  # =====================================
   # Security Permissions
-  # =====================================
   security:
     name: Security Scanning
     runs-on: ubuntu-latest
@@ -192,18 +139,18 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run Security Scan
-        run: echo "Security scanning enabled"
+      - run: echo "Running security scan"
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
 
-  # =====================================
-  # All Available Permissions
-  # =====================================
   all-permissions-reference:
     name: All Permissions Reference
     runs-on: ubuntu-latest
     if: false # Reference only
     
+    # All Available Permissions
+    # See: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
     permissions:
       actions: write             # Cancel/rerun workflows
       attestations: write        # Create attestations
@@ -222,25 +169,3 @@ jobs:
     
     steps:
       - run: echo "All permissions granted"
-
-  # =====================================
-  # Best Practices Demo
-  # =====================================
-  best-practices:
-    name: Best Practices
-    runs-on: ubuntu-latest
-    
-    # Minimal permissions needed for this job
-    permissions:
-      contents: read
-    
-    steps:
-      - name: Security Guidelines
-        run: |
-          echo "✓ Grant minimum permissions needed"
-          echo "✓ Override at job level when needed"
-          echo "✓ Use {} to disable all permissions"
-          echo "✓ Separate jobs by permission needs"
-          echo "✓ Use environments for sensitive operations"
-          echo "✓ Review permissions regularly"
-          echo "✓ Document why permissions are needed"

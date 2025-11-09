@@ -218,7 +218,8 @@ jobs:
     # Because we provide 'uses' here, we are calling another workflow
     uses: ./.github/workflows/reusable-called.yml
     with:
-      username: "GitHub Actions User"
+      username: "GitHub Actions User" # Reusable workflows take inputs just like actions do.
+    secrets: inherit # Secrets must be explicitly passed to reusable workflows
     # Notice the lack of steps. All steps are defined in the called workflow
 
   # Custom actions - Create your own reusable actions in .github/actions/
@@ -237,7 +238,7 @@ jobs:
         with:
           who-to-greet: 'Composite User'
 
-      # JavaScript action - Full-featured Node.js action
+      # JavaScript action - Node.js action
       - name: Run JavaScript action
         uses: ./.github/actions/hello-world-javascript-action
         with:
