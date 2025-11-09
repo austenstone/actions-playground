@@ -1,6 +1,0 @@
-{
-    "alertName": "Log Analytics capacity",
-    "alertDescription": "Log Analytics nearing Full capacity",
-    "alertSeverity": 0,
-    "monitoredResourceId": "/subscriptions/123456789/resourceGroups/my-resourcegroup/providers/Microsoft.OperationalInsights/workspaces/la-mylog"
-}
