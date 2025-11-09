@@ -17,6 +17,8 @@ This repository serves as a comprehensive collection of resources and examples d
 - [Microsoft Training](https://learn.microsoft.com/en-us/training/browse/?products=github&terms=actions) - Official Microsoft training paths and modules.
 - [GitHub Learning Pathway: Improve productivity through automation](https://resources.github.com/learn/pathways/automation/) - Guided learning pathways for automation.
 - [Udemy Course](https://www.udemy.com/course/github-actions-the-complete-guide/?srsltid=AfmBOoq0BlmNUaRMlUDmisGAxSrKjrvjALt9-7k3QCsTPHiAs0LMixYX) - Comprehensive video tutorials.
+- [GitHub Actions Certification](https://learn.github.com/certification/ACTIONS) - Official certification program for GitHub Actions.
+- [LinkedIn: Prepare for the GitHub Foundations Certification](https://www.linkedin.com/learning/paths/prepare-for-the-github-foundations-certification) - Comprehensive LinkedIn Learning path to prepare for the GitHub Foundations Certification.
 
 ### 📺 Videos
 - [GitHub: What is GitHub Actions?](https://www.youtube.com/watch?v=URmeTqglS58) - High level overview of GitHub Actions. (60 seconds)
