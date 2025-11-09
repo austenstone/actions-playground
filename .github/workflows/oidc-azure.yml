@@ -1,5 +1,7 @@
 name: Run Azure Login with OIDC
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 permissions:
   id-token: write
