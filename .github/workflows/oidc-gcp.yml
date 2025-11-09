@@ -17,7 +17,27 @@ jobs:
           create_credentials_file: true
           workload_identity_provider: 'projects/300309835171/locations/global/workloadIdentityPools/github-actions/providers/github'
           service_account: 'github-actions@gh-actions-36962.iam.gserviceaccount.com'
-    - name: gcloud
-      run: |
-        gcloud auth login --brief --cred-file="${{ steps.auth.outputs.credentials_file_path }}"
-        gcloud services list
+    
+    - name: Verify Authentication
+      run: gcloud auth list
+    
+    - name: Check Configuration
+      run: gcloud config list
+    
+    - name: List Enabled Services
+      run: gcloud services list --enabled
+    
+    - name: Describe Project
+      run: gcloud projects describe gh-actions-36962
+    
+    - name: List Service Accounts
+      run: gcloud iam service-accounts list
+    
+    - name: List Available Regions
+      run: gcloud compute regions list --limit=5
+    
+    - name: List Available Zones
+      run: gcloud compute zones list --limit=10
+    
+    - name: Check Storage Buckets
+      run: gcloud storage buckets list || echo "No buckets found or insufficient permissions"
