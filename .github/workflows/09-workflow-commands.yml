@@ -19,7 +19,6 @@ on:
         type: boolean
 
 jobs:
-  # Demonstrates basic workflow commands
   basic-commands:
     name: Basic Workflow Commands
     runs-on: ubuntu-latest
@@ -100,7 +99,7 @@ jobs:
           # Generate a random secret
           GENERATED_SECRET=$((RANDOM))
           echo "::add-mask::$GENERATED_SECRET"
-          
+
   # Demonstrates outputs and environment variables
   outputs-and-env:
     name: Outputs & Environment Variables

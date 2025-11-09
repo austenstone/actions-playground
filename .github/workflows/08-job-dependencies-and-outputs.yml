@@ -1,4 +1,4 @@
-name: 05. Job Dependencies, Artifacts, & Outputs
+name: 08. Job Dependencies, Artifacts, & Outputs
 
 on:
   push:
