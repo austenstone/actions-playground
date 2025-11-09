@@ -6,7 +6,8 @@
 # documentation.
 name: AWS example workflow
 on:
-  push
+  push:
+  workflow_dispatch:
 env:
   BUCKET_NAME : "actions-playground-oidc-test-7895"
   AWS_REGION : "us-east-1"
