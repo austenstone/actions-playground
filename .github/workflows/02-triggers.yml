@@ -1,0 +1,172 @@
+name: 02. Triggers & Context
+
+# Workflow triggers are events that cause a workflow to run.
+# There are 30+ triggers for all kinds of GitHub events.
+# Each of these events have parameters to customize their behavior.
+# See: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+on:
+  # Trigger on git push events
+  push:
+    # Path filters
+    paths:
+      - "src/**" # Any file in src/ and subdirectories
+      - "docs/*.md" # Markdown files in docs/ only
+      - "**.js" # JavaScript files anywhere
+      - "!src/test/**" # Exclude test files
+      - "config/[a-z]*.yml" # YAML files starting with lowercase letter
+      - ".github/workflows/**" # Any workflow file changes
+
+    # Branch filters
+    branches:
+      - main # main branch
+      - "release/v[0-9].[0-9]" # release/v1.0, release/v2.1, etc.
+      - "feature/*" # Any feature branch
+      - "!experimental" # Exclude experimental branch
+
+    # Tag filters
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+" # Semantic version tags
+      - "!*-alpha" # Exclude alpha tags
+
+  # Trigger on pull requests targeting main
+  pull_request:
+    branches: [main]
+
+  # Trigger on pull request reviews
+  pull_request_review:
+    types: [submitted]
+
+  # Trigger manually from the GitHub UI
+  workflow_dispatch:
+    # Optional: Define inputs for manual trigger
+    inputs:
+      example-input:
+        description: "An example input for manual trigger"
+        required: false # Whether this input is required
+        default: "default-value"
+        type: string # type can be string, boolean, choice, environment, or number
+
+  # Callable workflows can be triggered by other workflows using the workflow_call event.
+  workflow_call:
+    # Inputs for the callable workflow
+    inputs:
+      example-input:
+        description: "An example input for callable workflow"
+        required: false
+        default: "default-value"
+        type: string
+    # Outputs can be used to pass data back to the caller
+    outputs:
+      job-output:
+        description: "An example output from callable workflow"
+        value: ${{ jobs.dump_contexts_to_log.result }} # These values can leverage expressions
+
+  # Trigger based on the conclusion of another workflow
+  workflow_run:
+    workflows: ["01. Hello World"]
+    types:
+      - completed
+    branches:
+      - main
+
+  # Trigger on a schedule (cron syntax)
+  schedule:
+    - cron: "0 0 * * *" # Daily at midnight UTC
+    - cron: "0 12 * * *" # Daily at noon UTC
+
+# There are many more trigger types and options available
+# See: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+
+# Concurrency controls allow you to limit concurrent workflow runs
+# This prevents multiple runs from interfering with each other (e.g., deploying to the same environment)
+concurrency:
+  # The concurrency group determines which runs are grouped together
+  # Runs in the same group will respect the concurrency rules
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # When true, cancels any in-progress runs in the same group when a new run starts
+  # Useful for CI where you only care about the latest commit
+  cancel-in-progress: true
+
+# When a job runs, it has a context that contains information about the workflow run, the job, the runner, and etc.
+# See: https://docs.github.com/en/actions/reference/workflows-and-actions/contexts
+jobs:
+  dump_contexts_to_log:
+    runs-on: ubuntu-latest
+    steps:
+      # The github context contains information about the workflow run and the event that triggered the run.
+      - env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      # The full event webhook payload.
+      - name: Check PR title
+        # Use environment variables for untrusted input
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [[ "$TITLE" =~ ^octocat ]]; then
+          echo "PR title starts with 'octocat'"
+          exit 0
+          fi
+
+      # The job context contains information about the currently running job.
+      - env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+
+      # The steps context contains information about the steps in the current job that have an id specified and have already run.
+      - env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Generate 0 or 1
+        id: generate_number
+        run: echo "random_number=$(($RANDOM % 2))" >> $GITHUB_OUTPUT
+      - name: Pass or fail
+        run: |
+          if [[ ${{ steps.generate_number.outputs.random_number }} == 0 ]]; then exit 0; else exit 1; fi
+
+      # The runner context contains information about the runner that is executing the current job.
+      # In our case "ubuntu-latest"
+      - env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+
+  # Matrix jobs have the 'strategy' and 'matrix' contexts
+  test:
+    runs-on: ${{ matrix.runner.os }} # Usage of 'matrix' context
+    
+    # Job-level concurrency controls how this specific job runs across different workflow runs
+    # This is independent of workflow-level concurrency
+    concurrency:
+      # Group by matrix combination - each OS/node combo can run independently
+      group: test-${{ matrix.runner.os }}-${{ matrix.node }}-${{ github.ref }}
+      # Don't cancel in-progress test runs for this specific combination
+      # Useful when you want to see all test results, even for older commits
+      cancel-in-progress: false
+    
+    # Runs jobs for all combinations (a matrix) of variables.
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, windows-latest] # 2 operating systems
+        node: [14, 16] # 2 node versions
+    # Results in 4 jobs (2 runners x 2 nodes)
+    steps:
+      # The 'strategy' context contains information about the matrix execution strategy for the current job.
+      - env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - run: echo "Mock test logs" > test-job-${{ strategy.job-index }}.txt
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build log for job ${{ strategy.job-index }} of ${{ strategy.job-total }}
+          path: test-job-${{ strategy.job-index }}.txt
+
+      # The 'matrix' context contains the matrix properties defined in the workflow file that apply to the current job.
+      - env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Output node version
+        run: node --version
