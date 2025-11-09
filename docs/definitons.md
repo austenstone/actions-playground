@@ -1,6 +1,10 @@
 
 ## Definitions
 
+# [GitHub Actions](https://docs.github.com/en/actions)
+
+At its core, GitHub Actions is a powerful, event-driven automation engine built directly into your repository. It gives you the power to automate any software development task by creating custom workflows that trigger on events like pushes, new issues, or pull request comments. While perfect for CI/CD, its true power is automating the entire lifecycle of your repository.
+
 ### [Actions Workflows](https://docs.github.com/en/actions/using-workflows)
 
 A workflow is a configurable automated process that will run one or more jobs. Each job is its own virtual machine.

@@ -1,10 +1,5 @@
 This repository serves as a comprehensive collection of resources and examples designed to help users master GitHub Actions. Whether you are new to CI/CD or an experienced developer, you will find valuable information here to help you learn, implement, and follow best practices for automating your workflows.
 
-
-# [GitHub Actions](https://docs.github.com/en/actions)
-
-At its core, GitHub Actions is a powerful, event-driven automation engine built directly into your repository. It gives you the power to automate any software development task by creating custom workflows that trigger on events like pushes, new issues, or pull request comments. While perfect for CI/CD, its true power is automating the entire lifecycle of your repository.
-
 # Resources
 
 ### ⭐ Important GitHub Resources
