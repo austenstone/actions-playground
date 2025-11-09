@@ -1,0 +1,225 @@
+name: 04. Contexts, Secrets & Permissions
+
+# When a job runs, it has a context that contains information about the workflow run, the job, the runner, and etc.
+# See: https://docs.github.com/en/actions/reference/workflows-and-actions/contexts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# ==================================================
+# EXPRESSION SYNTAX: ${{ ... }}
+# ==================================================
+# Expressions allow you to programmatically set variables and access contexts
+# Use expressions to:
+# - Access context information
+# - Perform operations (arithmetic, string manipulation, etc.)
+# - Make conditional decisions
+# - Use built-in functions
+
+# ==================================================
+# ENVIRONMENT VARIABLES
+# ==================================================
+# Environment variables can be set at three levels:
+# 1. Workflow level (available to all jobs)
+# 2. Job level (available to all steps in that job)
+# 3. Step level (available only to that step)
+
+# Workflow-level environment variables
+env:
+  WORKFLOW_VAR: 'Available to all jobs'
+  APP_VERSION: '1.0.0'
+  NODE_ENV: 'production'
+
+# ==================================================
+# PERMISSIONS
+# ==================================================
+# Control what the GITHUB_TOKEN can access in this workflow
+# By default, GitHub provides a token with read permissions
+# Best practice: Use least-privilege principle (only grant what's needed)
+
+permissions:
+  contents: read      # Read repository contents
+  pull-requests: write # Create/update PRs
+  issues: write       # Create/update issues
+  # Other options: actions, checks, deployments, id-token, packages, pages, security-events, statuses
+
+jobs:
+  # ==================================================
+  # JOB 1: Expression Syntax & Basic Contexts
+  # ==================================================
+  expressions-demo:
+    name: Expression Syntax Demo
+    runs-on: ubuntu-latest
+    
+    # Job-level environment variables
+    env:
+      JOB_VAR: 'Available to all steps in this job'
+      DEPLOYMENT_ENV: ${{ github.event.inputs.environment || 'staging' }}
+    
+    # Job-level permissions (override workflow-level)
+    permissions:
+      contents: read
+    
+    steps:
+      # Expression syntax examples
+      - name: Basic Expression Syntax
+        run: |
+          echo "=== Expression Syntax Examples ==="
+          echo "String literal: ${{ 'Hello World' }}"
+          echo "Number: ${{ 42 }}"
+          echo "Boolean: ${{ true }}"
+          echo "String concat: ${{ 'Hello' }} ${{ 'World' }}"
+          
+      # Using the 'github' context
+      - name: GitHub Context
+        run: |
+          echo "=== GitHub Context ==="
+          echo "Actor (who triggered): ${{ github.actor }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Run number: ${{ github.run_number }}"
+          
+      # Conditional expressions
+      - name: Conditional Expressions
+        run: |
+          echo "=== Conditional Examples ==="
+          echo "Is main branch: ${{ github.ref == 'refs/heads/main' }}"
+          echo "Is PR: ${{ github.event_name == 'pull_request' }}"
+          echo "Contains 'bug': ${{ contains(github.event.head_commit.message, 'bug') }}"
+          echo "Starts with 'feat': ${{ startsWith(github.event.head_commit.message, 'feat') }}"
+          
+      # Step-level environment variables
+      - name: Environment Variable Levels
+        env:
+          STEP_VAR: 'Only available in this step'
+        run: |
+          echo "Workflow env var: $WORKFLOW_VAR"
+          echo "Job env var: $JOB_VAR"
+          echo "Step env var: $STEP_VAR"
+          
+      # Status check functions
+      - name: Status Check Functions
+        if: always() # Run even if previous steps fail
+        run: |
+          echo "success(): Runs if all previous steps succeeded"
+          echo "failure(): Runs if any previous step failed"
+          echo "always(): Always runs (like this step)"
+          echo "cancelled(): Runs if workflow was cancelled"
+
+  # ==================================================
+  # JOB 2: Secrets & GITHUB_TOKEN
+  # ==================================================
+  secrets-demo:
+    name: Secrets & Token Demo
+    runs-on: ubuntu-latest
+    needs: expressions-demo
+    
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Using the automatic GITHUB_TOKEN
+      - name: Using GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Token is automatically provided by GitHub"
+          echo "Token is masked in logs: $GITHUB_TOKEN"
+          echo "Use it for GitHub API calls within this repo"
+          
+      # Example: Using GITHUB_TOKEN with GitHub CLI
+      - name: GitHub CLI with Token
+        run: |
+          gh api /repos/${{ github.repository }} --jq '.name'
+          echo "Repository stars: $(gh api /repos/${{ github.repository }} --jq '.stargazers_count')"
+        # gh needs you to pass env 'GITHUB_TOKEN'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Accessing custom secrets (if defined in repo settings)
+      - name: Custom Secrets
+        run: |
+          echo "Secrets are encrypted and never exposed in logs"
+          echo "Define secrets in: Settings > Secrets and variables > Actions"
+          echo "Example usage: GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}"
+          
+      # Security: Use env vars for untrusted input
+      - name: Secure Input Handling
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Always use env vars for user input to prevent script injection"
+          echo "PR Title: $PR_TITLE"
+
+  # ==================================================
+  # JOB 3: All Context Objects
+  # ==================================================
+  contexts-dump:
+    name: All Contexts Demo
+    runs-on: ${{ matrix.os }}
+    needs: secrets-demo
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20]
+    
+    env:
+      MATRIX_OS: ${{ matrix.os }}
+    
+    steps:
+      - name: GitHub Context
+        run: echo '${{ toJSON(github) }}'
+        
+      - name: Env Context
+        run: echo '${{ toJSON(env) }}'
+        
+      - name: Job Context
+        run: echo '${{ toJSON(job) }}'
+        
+      - name: Steps Context
+        id: example-step
+        run: |
+          echo "step-output=Hello from step" >> $GITHUB_OUTPUT
+          echo '${{ toJSON(steps) }}'
+      - run: |
+          echo "Previous step output: ${{ steps.example-step.outputs.step-output }}"
+        
+      - name: Runner Context
+        run: echo '${{ toJSON(runner) }}'
+        
+      - name: Strategy Context
+        run: echo '${{ toJSON(strategy) }}'
+        
+      - name: Matrix Context
+        run: |
+          echo '${{ toJSON(matrix) }}'
+          echo "Running on: ${{ matrix.os }} with Node ${{ matrix.node }}"
+          
+      - name: Needs Context (if dependencies exist)
+        run: echo '${{ toJSON(needs) }}'
+        
+      - name: Inputs Context (for workflow_dispatch)
+        run: echo '${{ toJSON(inputs) }}'

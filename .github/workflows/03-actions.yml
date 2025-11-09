@@ -1,0 +1,256 @@
+name: 03. Using Marketplace Actions
+
+# Actions are reusable code you can use in workflows with the 'uses' keyword
+# Marketplace actions: https://github.com/marketplace (thousands of pre-built actions)
+# Custom actions: Create your own in .github/actions/ or separate repos
+# Reusable workflows: Call entire workflows
+# Composite actions: Bundle multiple steps into one action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Basic action usage demonstrating the essential actions
+  basic-actions:
+    name: Essential Actions
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout - The most fundamental action
+      # The 'uses' keyword specifies the action to run
+      - uses: actions/checkout@v4
+
+      # actions/setup-node - Setup actions configure programming environments
+      - name: Setup Node.js
+        # The 'id' keyword assigns an identifier to the step, to be referenced later
+        id: setup-node
+        uses: actions/setup-node@v4
+        # The 'with' keyword passes inputs (parameters) to the action
+        with:
+          node-version: "20"
+          cache: "npm" # Built-in caching for package managers
+
+      # Actions can have outputs that can be referenced
+      - run: echo 'Node version ${{ steps.setup-node.outputs.node-version }}'
+      
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build --if-present
+
+      # actions/upload-artifact - Share files between jobs or download later
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 7
+
+  # Demonstrates action versioning strategies
+  versioning-examples:
+    name: Action Versioning
+    runs-on: ubuntu-latest
+    steps:
+      # Major version (recommended) - Gets latest v4.x.x
+      - uses: actions/checkout@v4
+
+      # Specific version - Pins to exact release
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: "20"
+
+      # Commit SHA - Most secure, immutable
+      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}
+
+      # Branch reference - Gets latest from branch (not recommended for production)
+      - uses: actions/setup-python@main
+        with:
+          python-version: "3.12"
+
+  # Using artifacts between jobs
+  artifact-workflow:
+    name: Create Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create test files
+        run: |
+          mkdir -p artifacts
+          echo "Build ${{ github.run_number }}" > artifacts/build-info.txt
+          date > artifacts/timestamp.txt
+
+      - name: Upload multiple artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: artifacts/
+
+  consume-artifacts:
+    name: Download Artifacts
+    runs-on: ubuntu-latest
+    needs: artifact-workflow
+    steps:
+      # actions/download-artifact - Retrieve artifacts from current workflow
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path: ./downloaded
+
+      - name: Display artifact contents
+        run: |
+          ls -la downloaded/
+          cat downloaded/build-info.txt
+
+  # Popular marketplace actions: https://github.com/marketplace
+  community-actions:
+    name: Community Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for change detection
+
+      # Setup Python with pip caching
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # Setup Go with automatic module caching
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      # Setup Java with Maven
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "maven"
+
+      # actions/github-script - Run JavaScript with GitHub API access
+      - name: Use GitHub Script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const repo = context.repo;
+            console.log(`Repository: ${repo.owner}/${repo.repo}`);
+            console.log(`Run number: ${context.runNumber}`);
+
+      # dorny/paths-filter - Detect which file paths changed
+      - name: Check which paths changed
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
+            docs:
+              - 'docs/**'
+              - '*.md'
+
+      - name: Run if source changed
+        if: steps.filter.outputs.src == 'true'
+        run: echo "Source files changed"
+
+      # tj-actions/changed-files - Get list of changed files
+      - name: Get changed files
+        uses: tj-actions/changed-files@v45
+        id: changed-files
+        with:
+          files: |
+            **/*.js
+            **/*.ts
+
+      - name: List changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+
+      # Azure actions
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # AWS actions
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+
+      # Hashicorp Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      # docker/setup-buildx-action - Setup Docker Buildx
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # docker/build-push-action - Build and push Docker images
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: myapp:latest
+
+  # Reusable workflows - Call entire workflows from other workflow files (reusable jobs)
+  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations
+  reusable-workflow-example:
+    name: Call Reusable Workflow
+    # Because we provide 'uses' here, we are calling another workflow
+    uses: ./.github/workflows/reusable-called.yml
+    with:
+      username: "GitHub Actions User"
+    # Notice the lack of steps. All steps are defined in the called workflow
+
+  # Custom actions - Create your own reusable actions in .github/actions/
+  # Three types: JavaScript actions, Docker actions, and Composite actions
+  # All actions are defined by a metadata file 'action.yml'
+  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+  custom-actions:
+    name: Custom Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Composite action - Bundles multiple steps together
+      - name: Run composite action
+        uses: ./.github/actions/composite-action
+        with:
+          who-to-greet: 'Composite User'
+
+      # JavaScript action - Full-featured Node.js action
+      - name: Run JavaScript action
+        uses: ./.github/actions/hello-world-javascript-action
+        with:
+          who-to-greet: 'JavaScript User'
+
+      # Docker action - Runs in a container
+      - name: Run Docker action
+        uses: ./.github/actions/docker-action
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Python composite action - Runs Python inline
+      - name: Run Python action
+        uses: ./.github/actions/python-action
+        with:
+          who-to-greet: 'Python User'
