@@ -8,16 +8,19 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 # Resources
 
 ### ⭐ Important GitHub Resources
-- [GitHub Documentation](https://docs.github.com/en/actions) - The official documentation for GitHub Actions. This is the best place to start learning about all the features and capabilities.
-- [GitHub Blog](https://github.blog/tag/github-actions) - Official blog posts and announcements related to GitHub Actions.
+- [Documentation](https://docs.github.com/en/actions) - The official documentation for GitHub Actions.
+- [Blog](https://github.blog/tag/github-actions) - Official blog posts and announcements related to GitHub Actions.
 - [Changelog](https://github.blog/changelog/2025/?label=actions) - Latest updates and improvements to GitHub Actions.
-- [GitHub Actions Community Forum](https://github.com/orgs/community/discussions/) - A place to discuss and get help with GitHub Actions.
-- [GitHub Marketplace](https://github.com/marketplace) - A marketplace for GitHub Actions and other tools.
+- [Marketplace](https://github.com/marketplace) - A marketplace for GitHub Actions and other tools.
+- [Resources](https://resources.github.com/topics/github-actions/) - A collection of resources and guides.
+- [Actions Community Forum](https://github.com/orgs/community/discussions/) - A place to discuss and get help with GitHub Actions.
+- [Support](https://support.github.com/) - Official support channel
 
 ### 🎓 Courses
 - [GitHub Skills](https://skills.github.com/#automate-workflows-with-github-actions) - Interactive courses to learn GitHub Actions by doing.
 - [GitHub Learn](https://learn.github.com/learning?product=GitHub+Actions) - Curated courses from top learning platforms.
 - [Microsoft Training](https://learn.microsoft.com/en-us/training/browse/?products=github&terms=actions) - Official Microsoft training paths and modules.
+- [GitHub Learning Pathway: Improve productivity through automation](https://resources.github.com/learn/pathways/automation/) - Guided learning pathways for automation.
 - [Udemy Course](https://www.udemy.com/course/github-actions-the-complete-guide/?srsltid=AfmBOoq0BlmNUaRMlUDmisGAxSrKjrvjALt9-7k3QCsTPHiAs0LMixYX) - Comprehensive video tutorials.
 
 ### 📺 Videos
@@ -32,7 +35,16 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 - [Mickey Gousset: GitHub Actions](https://www.youtube.com/watch?v=5XfgT9A9PHw&list=PLiO7XHcmTsleGRnjT2o0ILzXUkzFJ87eR) - A series of videos by Mickey Gousset focused on a variety of GitHub Actions topics. (5 hours)
 
 ### 🤔 Why Actions?
+- [Whitepaper: What is GitHub Actions? How CI/CD & automation work on GitHub](https://github.com/resources/whitepapers/actions) - A full guide on the benefits of having built-in automation and CI/CD capabilities on GitHub, how GitHub Actions work, common use cases, and more.
+- [GitHub Actions Customer Stories](https://github.com/customer-stories/enterprise?feature=GitHub%2BActions#browse) - Real-world examples of how organizations use GitHub Actions to automate their workflows.
 - [Stop re-writing pipelines! Why GitHub Actions drive the future of CI/CD](https://www.codecentric.de/en/knowledge-hub/blog/github-actions-nextgen-cicd) - An in-depth look at the advantages of using GitHub Actions for CI/CD.
+- [5 Top Reasons to Use GitHub Actions for Your Next Project](https://dev.to/n3wt0n/5-top-reasons-to-use-github-actions-for-your-next-project-cga) - A concise summary of the benefits of adopting GitHub Actions.
+- [How Github Improved their CI/CD with GitHub Actions](https://machine-learning-made-simple.medium.com/how-github-improved-their-ci-cd-with-github-actions-e1b36f4cbcc9) - How GitHub uses GitHub Actions and Actions larger runners to build and test GitHub.com
+
+### 🤨 Critiques
+- [The Pain That Is GitHub Actions](https://www.feldera.com/blog/the-pain-that-is-github-actions)
+- [GitHub Actions could be so much better](https://blog.yossarian.net/2023/09/22/GitHub-Actions-could-be-so-much-better)
+- [I'll think twice before using Github Actions again](https://ninkovic.dev/blog/2025/think-twice-before-using-github-actions)
 
 ### 🚚 Migrations
 - [Migrate to GitHub Actions](https://docs.github.com/en/actions/tutorials/migrate-to-github-actions) - Official migration guide.
@@ -50,7 +62,6 @@ At its core, GitHub Actions is a powerful, event-driven automation engine built 
 ### 💼 Sales
 - [Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
 - [GitHub vs. other DevOps Tools](https://resources.github.com/devops/tools/compare/)
-- [GitHub Actions Customer Stories](https://github.com/customer-stories/enterprise?feature=GitHub%2BActions#browse) - Real-world examples of how organizations use GitHub Actions to automate their workflows.
 - [Services: GitHub Actions Training](https://github.com/services/actions-training) - Paid expert-led training sessions.
 - [Sales Page](https://github.com/features/actions)
 
