@@ -1,0 +1,23 @@
+name: List services in GCP
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+
+jobs:
+  Get_OIDC_ID_token:
+    runs-on: ubuntu-latest
+    steps:
+    - id: auth
+      name: Authenticate to GCP
+      uses: google-github-actions/auth@v3
+      with:
+          create_credentials_file: true
+          workload_identity_provider: 'projects/300309835171/locations/global/workloadIdentityPools/github-actions/providers/github'
+          service_account: 'github-actions@gh-actions-36962.iam.gserviceaccount.com'
+    - name: gcloud
+      run: |
+        gcloud auth login --brief --cred-file="${{ steps.auth.outputs.credentials_file_path }}"
+        gcloud services list
