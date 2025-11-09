@@ -1,4 +1,4 @@
-name: List services in GCP
+name: OIDC GCP
 on:
   push:
   workflow_dispatch:
