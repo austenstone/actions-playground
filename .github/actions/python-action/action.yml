@@ -1,7 +1,7 @@
 name: 'Hello World'
 description: 'Greet someone'
 inputs:
-  who-to-greet:  # id of input
+  who-to-greet:
     description: 'Who to greet'
     required: true
     default: 'World'
@@ -12,14 +12,21 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set Greeting
-      run: echo "Hello $INPUT_WHO_TO_GREET."
-      shell: bash
-      env:
-        INPUT_WHO_TO_GREET: ${{ inputs.who-to-greet }}
-
     - name: Call Python Script
-      run: python script.py "$INPUT_WHO_TO_GREET"
-      shell: bash
+      id: random-number-generator
+      run: |
+        import os
+        import random
+        who_to_greet = os.getenv("WHO_TO_GREET")
+        print(f"Hello {who_to_greet} from Python!")
+        
+        # Generate a random number and set it as output
+        random_num = random.randint(1, 100)
+        github_output = os.getenv("GITHUB_OUTPUT")
+        if github_output:
+            with open(github_output, "a") as f:
+                f.write(f"random-number={random_num}\n")
+        print(f"Generated random number: {random_num}")
+      shell: python
       env:
-        INPUT_WHO_TO_GREET: ${{ inputs.who-to-greet }}
+        WHO_TO_GREET: ${{ inputs.who-to-greet }}
