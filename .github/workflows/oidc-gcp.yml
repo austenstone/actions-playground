@@ -34,10 +34,13 @@ jobs:
       run: gcloud iam service-accounts list
     
     - name: List Available Regions
+      continue-on-error: true
       run: gcloud compute regions list --limit=5
     
     - name: List Available Zones
+      continue-on-error: true
       run: gcloud compute zones list --limit=10
     
     - name: Check Storage Buckets
-      run: gcloud storage buckets list || echo "No buckets found or insufficient permissions"
+      continue-on-error: true
+      run: gcloud storage buckets list
