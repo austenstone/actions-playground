@@ -42,7 +42,7 @@ jobs:
       - name: Build project
         run: npm run build --if-present
 
-      # actions/upload-artifact - Share files between jobs or download later
+      # Share files between jobs or download later
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -57,18 +57,15 @@ jobs:
     steps:
       # Major version (recommended) - Gets latest v4.x.x
       - uses: actions/checkout@v4
-
       # Specific version - Pins to exact release
       - uses: actions/setup-node@v4.1.0
         with:
           node-version: "20"
-
       # Commit SHA - Most secure, immutable
       - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}
-
       # Branch reference - Gets latest from branch (not recommended for production)
       - uses: actions/setup-python@main
         with:
@@ -109,6 +106,51 @@ jobs:
         run: |
           ls -la downloaded/
           cat downloaded/build-info.txt
+
+  # Reusable workflows - Call entire workflows from other workflow files (reusable jobs)
+  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations
+  reusable-workflow-example:
+    name: Call Reusable Workflow
+    # Because we provide 'uses' here, we are calling another workflow
+    uses: ./.github/workflows/reusable-called.yml
+    with:
+      username: "GitHub Actions User" # Reusable workflows take inputs just like actions do.
+    secrets: inherit # Secrets must be explicitly passed to reusable workflows
+    # Notice the lack of steps. All steps are defined in the called workflow
+
+  # Custom actions - Create your own reusable actions in .github/actions/
+  # Three types: JavaScript actions, Docker actions, and Composite actions
+  # All actions are defined by a metadata file 'action.yml'
+  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+  custom-actions:
+    name: Custom Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Composite action - Bundles multiple steps together
+      - name: Run composite action
+        uses: ./.github/actions/composite-action
+        with:
+          who-to-greet: 'Composite User'
+
+      # JavaScript action - Node.js action
+      - name: Run JavaScript action
+        uses: ./.github/actions/hello-world-javascript-action
+        with:
+          who-to-greet: 'JavaScript User'
+
+      # Docker action - Runs in a container
+      - name: Run Docker action
+        uses: ./.github/actions/docker-action
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Python composite action - Runs Python inline
+      - name: Run Python action
+        uses: ./.github/actions/python-action
+        with:
+          who-to-greet: 'Python User'
 
   # Popular marketplace actions: https://github.com/marketplace
   community-actions:
@@ -210,48 +252,3 @@ jobs:
           context: .
           push: false
           tags: myapp:latest
-
-  # Reusable workflows - Call entire workflows from other workflow files (reusable jobs)
-  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations
-  reusable-workflow-example:
-    name: Call Reusable Workflow
-    # Because we provide 'uses' here, we are calling another workflow
-    uses: ./.github/workflows/reusable-called.yml
-    with:
-      username: "GitHub Actions User" # Reusable workflows take inputs just like actions do.
-    secrets: inherit # Secrets must be explicitly passed to reusable workflows
-    # Notice the lack of steps. All steps are defined in the called workflow
-
-  # Custom actions - Create your own reusable actions in .github/actions/
-  # Three types: JavaScript actions, Docker actions, and Composite actions
-  # All actions are defined by a metadata file 'action.yml'
-  # See: https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
-  custom-actions:
-    name: Custom Actions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # Composite action - Bundles multiple steps together
-      - name: Run composite action
-        uses: ./.github/actions/composite-action
-        with:
-          who-to-greet: 'Composite User'
-
-      # JavaScript action - Node.js action
-      - name: Run JavaScript action
-        uses: ./.github/actions/hello-world-javascript-action
-        with:
-          who-to-greet: 'JavaScript User'
-
-      # Docker action - Runs in a container
-      - name: Run Docker action
-        uses: ./.github/actions/docker-action
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Python composite action - Runs Python inline
-      - name: Run Python action
-        uses: ./.github/actions/python-action
-        with:
-          who-to-greet: 'Python User'

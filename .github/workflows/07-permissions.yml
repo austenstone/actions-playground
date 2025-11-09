@@ -28,7 +28,8 @@ jobs:
           echo "Can read repo contents (inherited from workflow)"
           gh api /repos/${{ github.repository }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # The token GITHUB_TOKEN is effected by 'permissions'
+          # You must pass the GITHUB_TOKEN to use the gh cli
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   override-permissions:
     runs-on: ubuntu-latest
@@ -42,7 +43,7 @@ jobs:
       - name: Create Issue Comment
         run: |
           echo "This job can write issues but not PRs"
-          # gh issue comment 1 --body "Test comment"
+          gh issue comment 1 --body "Test comment"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -69,11 +70,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Read Repository Data
-        run: |
-          echo "Can read but not write"
-          gh api /repos/${{ github.repository }} --jq '.name'
+      - name: Can read but not write
+        run: gh api /repos/${{ github.repository }} --jq '.name'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -89,7 +87,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
       - name: Write Operations
         run: |
           echo "Can perform write operations"
