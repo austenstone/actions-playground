@@ -192,36 +192,6 @@ jobs:
             console.log(`Repository: ${repo.owner}/${repo.repo}`);
             console.log(`Run number: ${context.runNumber}`);
 
-      # dorny/paths-filter - Detect which file paths changed
-      - name: Check which paths changed
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'src/**'
-            docs:
-              - 'docs/**'
-              - '*.md'
-
-      - name: Run if source changed
-        if: steps.filter.outputs.src == 'true'
-        run: echo "Source files changed"
-
-      # tj-actions/changed-files - Get list of changed files
-      - name: Get changed files
-        uses: tj-actions/changed-files@v45
-        id: changed-files
-        with:
-          files: |
-            **/*.js
-            **/*.ts
-
-      - name: List changed files
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
-
       # Azure actions
       - name: Azure Login
         uses: azure/login@v2

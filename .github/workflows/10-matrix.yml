@@ -96,12 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.set-matrix.outputs.versions }}
-    
     steps:
       - id: set-matrix
-        run: |
-          # Create matrix dynamically
-          echo 'versions=["18", "20", "22"]' >> $GITHUB_OUTPUT
+        run: echo 'versions=["18", "20", "22"]' >> $GITHUB_OUTPUT
 
   use-dynamic-matrix:
     name: Use dynamic matrix - Node ${{ matrix.node }}

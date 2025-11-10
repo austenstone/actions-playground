@@ -1,9 +1,7 @@
 name: 09. Workflow Commands
 
-# This workflow demonstrates GitHub Actions workflow commands.
-# Workflow commands set environment variables, output values used by other actions, add debug messages to the output logs, and other tasks.
-# Most workflow commands use the echo command in a specific format, 
-# while others are invoked by writing to a file.
+# Workflow commands provide special functionality through echo statements
+# See: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions
 
 on:
   push:
@@ -11,170 +9,194 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Enable debug logging'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
-  basic-commands:
-    name: Basic Workflow Commands
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-      
-      # Debug messages (only visible if ACTIONS_STEP_DEBUG secret is true or input is enabled)
-      - name: Debug messages
-        run: |
-          echo "::debug::This is a debug message - only visible with debug logging enabled"
-          echo "::debug::Current directory: $(pwd)"
-          echo "::debug::Runner OS: ${{ runner.os }}"
-      
-      # Notice annotations (creates annotations in the workflow summary)
-      - name: Notice annotations
-        run: |
-          echo "::notice::This is a notice message"
-          echo "::notice file=app.js,line=1,col=5,endColumn=7::Missing semicolon"
-          echo "::notice title=Deployment Info::Application deployed successfully"
-      
-      # Warning annotations
-      - name: Warning annotations
-        run: |
-          echo "::warning::This is a warning message"
-          echo "::warning file=app.js,line=10,col=1,endColumn=20,title=Deprecated::This function is deprecated"
-          echo "::warning file=config.yml,line=5::Consider using environment-specific configuration"
-      
-      # Error annotations (creates error annotations but doesn't fail the step)
-      - name: Error annotations
-        run: |
-          echo "::error::This is an error annotation (doesn't fail the step)"
-          echo "::error file=app.js,line=25,col=10,endColumn=30,title=Type Error::Expected string but got number"
-          echo "Step continues after error annotation..."
-      
-      # Grouping log output for better readability
-      - name: Grouped log output
-        run: |
-          echo "::group::🔧 Build Information"
-          echo "Build number: ${{ github.run_number }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "::endgroup::"
-          
-          echo "::group::📦 Dependencies"
-          echo "Installing dependencies..."
-          echo "- react@18.0.0"
-          echo "- typescript@5.0.0"
-          echo "::endgroup::"
-          
-          echo "::group::✅ Test Results"
-          echo "Unit tests: 42 passed"
-          echo "Integration tests: 15 passed"
-          echo "::endgroup::"
-
-  # Demonstrates masking sensitive values
-  masking-secrets:
-    name: Masking Sensitive Values
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Mask sensitive strings
-        run: |
-          # Mask a sensitive value
-          SECRET_VALUE="super-secret-123"
-          echo "::add-mask::$SECRET_VALUE"
-          echo "The secret value is: $SECRET_VALUE"  # Will show as ***
-          
-          # Mask environment variable
-          echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
-          echo "Token: ${{ secrets.GITHUB_TOKEN }}"  # Already masked by default
-      
-      - name: Generate and mask secret
-        id: generate-secret
-        run: |
-          # Generate a random secret
-          GENERATED_SECRET=$((RANDOM))
-          echo "::add-mask::$GENERATED_SECRET"
-
-  # Demonstrates outputs and environment variables
-  outputs-and-env:
-    name: Outputs & Environment Variables
+  # Setting Outputs
+  outputs:
+    name: Step & Job Outputs
     runs-on: ubuntu-latest
     
     outputs:
       version: ${{ steps.set-version.outputs.version }}
-      build-time: ${{ steps.set-version.outputs.build-time }}
-      color: ${{ steps.colors.outputs.SELECTED_COLOR }}
+      status: ${{ steps.set-version.outputs.status }}
     
     steps:
       - name: Set step outputs
         id: set-version
         run: |
-          # Set multiple outputs
           echo "version=1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "build-time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
-          echo "commit-sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
       
-      - name: Use step outputs
+      - name: Use outputs
         run: |
           echo "Version: ${{ steps.set-version.outputs.version }}"
-          echo "Build time: ${{ steps.set-version.outputs.build-time }}"
-          echo "Commit: ${{ steps.set-version.outputs.commit-sha }}"
+          echo "Status: ${{ steps.set-version.outputs.status }}"
+          echo "Time: ${{ steps.set-version.outputs.timestamp }}"
       
-      - name: Set environment variables for subsequent steps
-        run: |
-          # These are available in all subsequent steps
-          echo "CUSTOM_VAR=custom-value" >> $GITHUB_ENV
-          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
-          echo "REPO_NAME=${{ github.repository }}" >> $GITHUB_ENV
-      
-      - name: Use environment variables
-        run: |
-          echo "Custom var: $CUSTOM_VAR"
-          echo "Build number: $BUILD_NUMBER"
-          echo "Repository: $REPO_NAME"
-      
-      # Multiline environment variables
-      - name: Set multiline environment variable
+      - name: Multiline output
+        id: multiline
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "MULTI_LINE_VAR<<$EOF" >> $GITHUB_ENV
-          echo "Line 1: This is a multiline" >> $GITHUB_ENV
-          echo "Line 2: environment variable" >> $GITHUB_ENV
-          echo "Line 3: with multiple lines" >> $GITHUB_ENV
-          echo "$EOF" >> $GITHUB_ENV
+          echo "content<<$EOF" >> $GITHUB_OUTPUT
+          echo "Line 1: multiline" >> $GITHUB_OUTPUT
+          echo "Line 2: output value" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
       
-      - name: Use multiline variable
-        run: |
-          echo "Multiline variable:"
-          echo "$MULTI_LINE_VAR"
-      
-      - name: Set color output
-        id: colors
-        run: echo "SELECTED_COLOR=green" >> $GITHUB_OUTPUT
+      - name: Use multiline output
+        run: echo "${{ steps.multiline.outputs.content }}"
 
-  # Demonstrates job summaries with Markdown
-  job-summaries:
-    name: Job Summaries
+  use-outputs:
+    name: Use Job Outputs
     runs-on: ubuntu-latest
-    needs: outputs-and-env
+    needs: outputs
     
     steps:
-      - name: Create basic job summary
+      - name: Access job outputs
+        run: |
+          echo "Version: ${{ needs.outputs.outputs.version }}"
+          echo "Status: ${{ needs.outputs.outputs.status }}"
+
+  # Environment Variables
+  environment-vars:
+    name: Dynamic Environment Variables
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Set env vars for future steps
+        run: |
+          echo "BUILD_ID=build-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+      
+      - name: Use env vars
+        run: |
+          echo "Build ID: $BUILD_ID"
+          echo "Timestamp: $TIMESTAMP"
+      
+      - name: Multiline env var
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "CONFIG<<$EOF" >> $GITHUB_ENV
+          echo "setting1=value1" >> $GITHUB_ENV
+          echo "setting2=value2" >> $GITHUB_ENV
+          echo "$EOF" >> $GITHUB_ENV
+      
+      - name: Use multiline env var
+        run: echo "$CONFIG"
+
+  # Annotations
+  annotations:
+    name: Notices, Warnings, Errors
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Notice annotations
+        run: |
+          echo "::notice::This is a notice"
+          echo "::notice file=app.js,line=10::Function is deprecated"
+          echo "::notice title=Build Success::Application built successfully"
+      
+      - name: Warning annotations
+        run: |
+          echo "::warning::This is a warning"
+          echo "::warning file=config.yml,line=5::Using default configuration"
+          echo "::warning title=Performance::Large file detected"
+      
+      - name: Error annotations
+        run: |
+          echo "::error::This is an error annotation (doesn't fail)"
+          echo "::error file=test.js,line=25,col=10::Type mismatch"
+          echo "Step continues after error annotation"
+      
+      - name: Debug messages
+        run: |
+          echo "::debug::Debug info (only visible with debug logging)"
+          echo "::debug::Variable value: ${{ github.sha }}"
+
+  # Log Grouping
+  grouping:
+    name: Log Groups
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Grouped output
+        run: |
+          echo "::group::📦 Installing Dependencies"
+          echo "Installing package 1..."
+          echo "Installing package 2..."
+          echo "Installing package 3..."
+          echo "::endgroup::"
+          
+          echo "::group::🔨 Building Application"
+          echo "Compiling source..."
+          echo "Bundling assets..."
+          echo "::endgroup::"
+          
+          echo "::group::✅ Tests Passed"
+          echo "Unit tests: 50 passed"
+          echo "Integration tests: 20 passed"
+          echo "::endgroup::"
+
+  # Masking Secrets
+  masking:
+    name: Mask Sensitive Values
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Mask generated secrets
+        run: |
+          TOKEN="secret-$(date +%s)"
+          echo "::add-mask::$TOKEN"
+          echo "Token value: $TOKEN"
+          echo "Output shows: ***"
+      
+      - name: Mask API key
+        run: |
+          API_KEY="sk-1234567890abcdef"
+          echo "::add-mask::$API_KEY"
+          echo "Using API key: $API_KEY"
+
+  # System PATH
+  system-path:
+    name: Add to PATH
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Add custom path
+        run: |
+          mkdir -p $HOME/custom-bin
+          
+          cat > $HOME/custom-bin/my-tool <<'EOF'
+          #!/bin/bash
+          echo "✅ Custom tool executed"
+          EOF
+          chmod +x $HOME/custom-bin/my-tool
+          
+          echo "$HOME/custom-bin" >> $GITHUB_PATH
+      
+      - name: Use custom path
+        run: my-tool
+
+  # Job Summaries
+  summaries:
+    name: Job Summaries
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create summary
         run: |
           echo "# 🎉 Workflow Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Build Information" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ needs.outputs-and-env.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Time**: ${{ needs.outputs-and-env.outputs.build-time }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Color**: ${{ needs.outputs-and-env.outputs.color }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
       
-      - name: Add markdown elements to summary
+      - name: Add test results table
         run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test Suite | Status | Duration |" >> $GITHUB_STEP_SUMMARY
@@ -182,201 +204,67 @@ jobs:
           echo "| Unit Tests | ✅ Pass | 2m 30s |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration | ✅ Pass | 5m 15s |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E Tests | ✅ Pass | 8m 45s |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
       
-      - name: Add code blocks and lists
+      - name: Add code block
         run: |
-          echo "## 🔍 Details" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Changes" >> $GITHUB_STEP_SUMMARY
-          echo "- Added new feature X" >> $GITHUB_STEP_SUMMARY
-          echo "- Fixed bug Y" >> $GITHUB_STEP_SUMMARY
-          echo "- Updated dependencies" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Command Output" >> $GITHUB_STEP_SUMMARY
+          echo "## 💻 Output" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "$ npm test" >> $GITHUB_STEP_SUMMARY
-          echo "42 tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-      
-      - name: Add images and links
-        run: |
-          echo "## 🔗 Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [Documentation](https://docs.github.com)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Repository](${{ github.server_url }}/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [This Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
-  # Demonstrates stopping and starting workflow commands
+  # Stop Commands
   stop-commands:
-    name: Stop Commands
+    name: Stop/Resume Commands
     runs-on: ubuntu-latest
     
     steps:
-      - name: Stop and restart workflow commands
+      - name: Stop command processing
         run: |
-          echo "::warning::This warning will be processed"
-          
-          # Generate a unique stop token
-          stopMarker=$(uuidgen)
-          echo "Stop marker: $stopMarker"
-          
-          # Stop processing workflow commands
-          echo "::stop-commands::$stopMarker"
-          
-          echo "::warning::This will NOT be rendered as a warning"
-          echo "::error::This will NOT be rendered as an error"
-          echo "Regular output still works fine"
-          
-          # Resume processing workflow commands
-          echo "::$stopMarker::"
-          
-          echo "::warning::This warning will be processed again"
-      
-      - name: Use case - logging user content safely
-        run: |
-          USER_CONTENT="::error::Fake error from user input"
+          echo "::warning::This warning is processed"
           
           stopMarker=$(uuidgen)
           echo "::stop-commands::$stopMarker"
-          echo "User submitted: $USER_CONTENT"
+          
+          echo "::warning::This will NOT be a warning"
+          echo "::error::This will NOT be an error"
+          echo "Regular output still works"
+          
           echo "::$stopMarker::"
           
-          echo "::notice::User content logged safely"
+          echo "::notice::Commands processing resumed"
 
-  # Demonstrates context expressions and functions
-  expressions-and-functions:
-    name: Expressions & Functions
-    runs-on: ubuntu-latest
-    
-    env:
-      # Literal data types in expressions
-      myNull: ${{ null }}
-      myBoolean: ${{ false }}
-      myIntegerNumber: ${{ 711 }}
-      myFloatNumber: ${{ -9.2 }}
-      myHexNumber: ${{ 0xff }}
-      myExponentialNumber: ${{ -2.99e-2 }}
-      myString: Mona the Octocat
-      myStringInBraces: ${{ 'It''s open source!' }}
-      NODE_VERSION: '18.x'
-    
-    steps:
-      - name: Demonstrate data types and expressions
-        id: demo-expressions
-        run: |
-          echo "### 🔢 Data Types" >> $GITHUB_STEP_SUMMARY
-          echo "- Null: ${{ null }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Boolean: ${{ false }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Integer: $myIntegerNumber" >> $GITHUB_STEP_SUMMARY
-          echo "- Float: $myFloatNumber" >> $GITHUB_STEP_SUMMARY
-          echo "- Hex: $myHexNumber" >> $GITHUB_STEP_SUMMARY
-          echo "- String: $myString" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        working-directory: ./
-      
-      - name: String functions
-        run: |
-          echo "### 📝 String Functions" >> $GITHUB_STEP_SUMMARY
-          echo "- Contains 'hello': ${{ contains('hello world', 'hello') }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Starts with 'hello': ${{ startsWith('hello world', 'hello') }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Ends with 'world': ${{ endsWith('hello world', 'world') }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Format: ${{ format('Hello {0} {1}!', 'GitHub', 'Actions') }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-      
-      - name: JSON functions
-        run: |
-          echo "### 🔧 JSON Functions" >> $GITHUB_STEP_SUMMARY
-          echo "- Join array: ${{ join(fromJSON('["apple", "banana", "cherry"]'), ', ') }}" >> $GITHUB_STEP_SUMMARY
-          echo '- Object to JSON: ${{ toJSON(github.event) }}' | head -c 200 >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-      
-      - name: Conditional functions
-        run: |
-          echo "### ✓ Conditional Logic" >> $GITHUB_STEP_SUMMARY
-          echo "- Is main branch: ${{ github.ref == 'refs/heads/main' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Is push event: ${{ github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Actor: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-      
-      - name: Set step output
-        id: set-output
-        run: echo "message=Hello from step output!" >> $GITHUB_OUTPUT
-      
-      - name: Use step output
-        run: |
-          echo "Output: ${{ steps.set-output.outputs.message }}"
-          echo "- Step output: ${{ steps.set-output.outputs.message }}" >> $GITHUB_STEP_SUMMARY
-
-  # Demonstrates adding paths to system PATH
-  system-path:
-    name: System PATH
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Add custom path
-        run: |
-          # Create a custom bin directory
-          mkdir -p $HOME/custom-bin
-          
-          # Create a custom script
-          cat > $HOME/custom-bin/my-script <<'EOF'
-          #!/bin/bash
-          echo "🚀 Custom script executed successfully!"
-          EOF
-          chmod +x $HOME/custom-bin/my-script
-          
-          # Add to PATH for subsequent steps
-          echo "$HOME/custom-bin" >> $GITHUB_PATH
-      
-      - name: Use custom path
-        run: |
-          echo "Path includes:"
-          echo $PATH | tr ':' '\n' | grep custom-bin
-          my-script
-
-  # Demonstrates all commands together in a practical scenario
-  practical-example:
+  # Practical Example
+  practical:
     name: Practical Example
     runs-on: ubuntu-latest
     
     outputs:
       deployment-url: ${{ steps.deploy.outputs.url }}
-      status: ${{ steps.deploy.outputs.status }}
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
       
-      - name: Build application
+      - name: Build
         id: build
         run: |
-          echo "::group::🏗️  Building application"
-          
-          echo "Starting build process..."
-          mkdir -p dist
-          
-          # Simulate build
-          echo "Build output" > dist/app.js
+          echo "::group::🏗️  Building"
           
           VERSION="1.0.${{ github.run_number }}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          echo "::notice title=Build Success::Built version $VERSION"
+          mkdir -p dist
+          echo "Build output" > dist/app.js
+          
+          echo "::notice title=Build::Built version $VERSION"
           echo "::endgroup::"
       
-      - name: Run tests
+      - name: Test
         run: |
-          echo "::group::🧪 Running tests"
-          
-          # Simulate tests
-          PASS=42
-          FAIL=0
-          
-          if [ $FAIL -gt 0 ]; then
-            echo "::error file=test/app.test.js,line=15::Test failed: Expected true but got false"
-          fi
-          
-          echo "Tests: $PASS passed, $FAIL failed"
+          echo "::group::🧪 Testing"
+          echo "Running tests..."
+          echo "Tests passed: 42"
           echo "::endgroup::"
       
       - name: Deploy
@@ -384,52 +272,20 @@ jobs:
         run: |
           echo "::group::🚀 Deploying"
           
-          # Simulate deployment
           URL="https://example.com/${{ steps.build.outputs.version }}"
-          
-          # Mask deployment token (simulated)
-          DEPLOY_TOKEN="secret-token-12345"
-          echo "::add-mask::$DEPLOY_TOKEN"
-          echo "Using token: $DEPLOY_TOKEN"
-          
           echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "status=success" >> $GITHUB_OUTPUT
+          
+          TOKEN="deploy-secret-123"
+          echo "::add-mask::$TOKEN"
           
           echo "Deployed to: $URL"
+          echo "::notice title=Deployment::Deployed to $URL"
           echo "::endgroup::"
-          
-          echo "::notice title=Deployment Complete::Application deployed to $URL"
       
-      - name: Create deployment summary
+      - name: Summary
         run: |
-          echo "# 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅ Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **URL**: [${{ steps.deploy.outputs.url }}](${{ steps.deploy.outputs.url }})" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ ${{ steps.deploy.outputs.status }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📊 Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Time | 2m 30s |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Time | 1m 15s |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploy Time | 45s |" >> $GITHUB_STEP_SUMMARY
-
-  # Job that uses outputs from previous job
-  notify:
-    name: Notify Results
-    runs-on: ubuntu-latest
-    needs: [practical-example]
-    if: always()
-    
-    steps:
-      - name: Notification
-        run: |
-          echo "::group::📢 Sending notification"
-          echo "Deployment URL: ${{ needs.practical-example.outputs.deployment-url }}"
-          echo "Status: ${{ needs.practical-example.outputs.status }}"
-          echo "::endgroup::"
-          
-          echo "::notice::Workflow completed successfully!"
