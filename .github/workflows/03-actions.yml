@@ -38,7 +38,7 @@ jobs:
       
       - run: npm init -y # Just for the example
       - name: Install dependencies
-        run: npm ci
+        run: npm i
 
       - name: Build project
         run: npm run build --if-present

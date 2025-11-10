@@ -27,17 +27,13 @@ jobs:
       REPORT_LABEL: broken link report
       REPORT_REPOSITORY: github/docs-content
     steps:
-      - name: Check out repo's default branch
-        uses: actions/checkout@v5
-      - name: Setup Node
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v3
         with:
           node-version: 16.13.x
           cache: npm
-      - name: npm ci
-        run: npm ci
-      - name: npm run build
-        run: npm run build --if-present
+      - run: npm i
+      - run: npm run build --if-present
       - name: Run script
         run: |
           script/check-english-links.js > broken_links.md
