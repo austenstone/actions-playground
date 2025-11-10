@@ -36,7 +36,7 @@ jobs:
       # Actions can have outputs that can be referenced
       - run: echo 'Node version ${{ steps.setup-node.outputs.node-version }}'
       
-      - run: npm init # Just for the example
+      - run: npm init -y # Just for the example
       - name: Install dependencies
         run: npm ci
 
