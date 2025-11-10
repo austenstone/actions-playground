@@ -1011,4 +1011,3 @@ jobs:
       - uses: phwes/simple_hello_world@v1
       - uses: phwes/simple_hello_world@v1
       - uses: phwes/simple_hello_world@v1
-      - uses: phwes/simple_hello_world@v1

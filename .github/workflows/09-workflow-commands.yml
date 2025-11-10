@@ -25,7 +25,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       # Debug messages (only visible if ACTIONS_STEP_DEBUG secret is true or input is enabled)
       - name: Debug messages
@@ -345,7 +345,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Build application
         id: build

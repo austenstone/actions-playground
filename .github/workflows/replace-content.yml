@@ -6,7 +6,7 @@ jobs:
   find-and-replace:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - uses: actions/github-script@v6
         env:
           SHA: ${{ github.sha }}

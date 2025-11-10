@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     # Default permissions are granted when none are specified
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test Default Access
         run: |
           echo "Can read repo contents (inherited from workflow)"
@@ -69,7 +69,7 @@ jobs:
       contents: read # Read only permissions (best practice)
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Can read but not write
         run: gh api /repos/${{ github.repository }} --jq '.name'
         env:
@@ -86,7 +86,7 @@ jobs:
       issues: write         # Create/update issues
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Write Operations
         run: |
           echo "Can perform write operations"
@@ -118,7 +118,7 @@ jobs:
       packages: write  # Publish to GitHub Packages
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - run: |
@@ -135,7 +135,7 @@ jobs:
       security-events: write  # Upload SARIF results
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: echo "Running security scan"
       - uses: github/codeql-action/upload-sarif@v4
         with:

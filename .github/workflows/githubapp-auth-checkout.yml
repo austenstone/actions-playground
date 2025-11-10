@@ -16,7 +16,7 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
           owner: ${{ ENV.OWNER }}
           repositories: ${{ env.REPOS }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           repository: ${{ ENV.OWNER }}/private
           token: ${{ steps.app-token.outputs.token }}

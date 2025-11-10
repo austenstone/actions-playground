@@ -132,9 +132,9 @@ jobs:
       # Reference a specific commit
       - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
       # Reference the major version of a release
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Reference a specific version
-      - uses: actions/checkout@v4.2.0
+      - uses: actions/checkout@v5.2.0
       # Reference a branch
       - uses: actions/checkout@main
 
@@ -272,7 +272,7 @@ jobs:
             node-version: 16
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -350,7 +350,7 @@ jobs:
           - 6379:6379
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Test database connection
         run: |
           sudo apt-get update
@@ -383,7 +383,7 @@ jobs:
       url: https://myapp.example.com
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Download artifacts from previous jobs
       - name: Download artifacts
