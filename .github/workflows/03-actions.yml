@@ -222,6 +222,16 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Create Dockerfile
+        run: |
+          cat <<'EOF' > Dockerfile
+          FROM alpine:latest
+          RUN apk add --no-cache curl
+          WORKDIR /app
+          COPY . .
+          CMD ["sh", "-c", "echo 'Hello from Docker!'"]
+          EOF
+      
       # docker/build-push-action - Build and push Docker images
       - name: Build Docker image
         uses: docker/build-push-action@v6
