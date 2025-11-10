@@ -300,10 +300,11 @@ jobs:
 
       - run: npm init -y # Just for the example
       - run: npm i
-      - run: npm run build
+      - run: npm run build --if-present
       - run: npm test
 
   container-job:
+    name: Container Job
     runs-on: ubuntu-latest
     container:
       image: node:18
@@ -364,6 +365,7 @@ jobs:
 
   # Reusable workflows are reusable jobs
   reusable-job:
+    name: Reusable Workflow Job
     uses: austenstone/actions-playground/.github/workflows/reusable-called.yml@main
     with:
       username: "GitHub Actions User"
