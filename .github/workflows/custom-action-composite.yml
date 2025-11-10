@@ -1,3 +1,4 @@
+name: Custom Action Composite
 on:
   workflow_dispatch:
     inputs:

@@ -1,3 +1,4 @@
+name: Custom Action Python
 on: [push]
 
 jobs:
