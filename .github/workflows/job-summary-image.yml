@@ -1,7 +1,7 @@
 on: workflow_dispatch
 
 jobs:
-  build:
+  github-script:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v6
@@ -10,3 +10,30 @@ jobs:
             await core.summary
               .addImage('https://octodex.github.com/images/minion.png', 'GitHub Octocat Minion', {width: '200', height: '200'})
               .write();
+  upload-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create image with matplotlib
+        run: |
+          import matplotlib.pyplot as plt
+          import numpy as np
+
+          # Create a simple image
+          data = np.random.rand(10,10)
+          plt.imshow(data, cmap='viridis')
+          plt.colorbar()
+          plt.title('Random Data Visualization')
+          plt.savefig('output.png', dpi=150, bbox_inches='tight')
+          print("✅ Image created successfully!")
+        shell: python
+        
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-visualization
+          path: output.png
+          
+      - name: Add image to job summary
+        run: |
+          echo "## Generated Visualization 📊" >> $GITHUB_STEP_SUMMARY
+          echo "![Generated Image](output.png)" >> $GITHUB_STEP_SUMMARY
