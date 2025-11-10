@@ -157,6 +157,9 @@ jobs:
   community-actions:
     name: Community Actions
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v5
         with:
