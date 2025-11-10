@@ -5,6 +5,351 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build:
+  # Run job steps inside a container
+  # Useful for consistent environments and testing
+  basic-container:
+    name: Basic Container Job
+    runs-on: ubuntu-latest
+    # Specify container image to run steps in
+    container:
+      image: node:20-bookworm-slim
+    
+    steps:
+      - name: Check environment
+        run: |
+          echo "Running inside container"
+          node --version
+          ls /.dockerenv && echo "✓ Confirmed in Docker container"
+
+  # Container with custom configuration
+  container-with-options:
+    name: Container with Options
+    runs-on: ubuntu-latest
+    container:
+      image: node:20
+      # Environment variables for container
+      env:
+        NODE_ENV: production
+        CUSTOM_VAR: "container-value"
+      # Expose ports (not needed when using services)
+      ports:
+        - 3000
+      # Mount volumes
+      volumes:
+        - my_volume:/data
+      # Docker run options
+      options: --cpus 1 --memory 512m
+    
+    steps:
+      - run: echo "NODE_ENV=$NODE_ENV"
+      - run: echo "Container with custom config"
+
+  # Private registry authentication
+  container-with-auth:
+    name: Container from Private Registry
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/owner/private-image:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - run: echo "Using authenticated container image"
+
+  # Service containers - Redis example
+  redis-service:
+    name: Job with Redis Service
+    runs-on: ubuntu-latest
+    container: node:20-bookworm-slim
+    
+    services:
+      # Service label (used as hostname)
+      redis:
+        image: redis:7
+        # Health checks ensure service is ready
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install redis client
+        run: |
+          apt-get update && apt-get install -y redis-tools
+      - name: Test Redis connection
+        run: |
+          # Use service label as hostname
+          redis-cli -h redis ping
+          redis-cli -h redis SET mykey "Hello from Actions"
+          redis-cli -h redis GET mykey
+
+  # PostgreSQL service with port mapping
+  postgres-service-runner:
+    name: PostgreSQL on Runner (not container)
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        # Port mapping required when job runs on runner (not in container)
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Test PostgreSQL
+        run: |
+          # Use localhost when running on runner machine
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d testdb -c '\l'
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d testdb -c 'CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(50));'
+        env:
+          PGPASSWORD: postgres
+
+  # Multiple services
+  multi-services:
+    name: Multiple Services
+    runs-on: ubuntu-latest
+    container: node:20-bookworm-slim
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      # No port mapping needed - containers on same network
+    
+    steps:
+      - name: Check services are accessible
+        run: |
+          apt-get update && apt-get install -y redis-tools postgresql-client
+          redis-cli -h redis ping
+          PGPASSWORD=postgres pg_isready -h postgres -U postgres
+
+  # Service with custom configuration
+  service-with-auth:
+    name: Service with Authentication
+    runs-on: ubuntu-latest
+    
+    services:
+      registry:
+        image: ghcr.io/owner/custom-service:latest
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        ports:
+          - 8080:8080
+    
+    steps:
+      - run: echo "Using authenticated service container"
+
+  # Dynamic port allocation
+  dynamic-ports:
+    name: Dynamic Port Example
+    runs-on: ubuntu-latest
+    
+    services:
+      web:
+        image: nginx:alpine
+        ports:
+          # Random port on host -> port 80 in container
+          - 80/tcp
+    
+    steps:
+      - name: Test web service
+        run: |
+          # Access dynamically assigned port via job.services context
+          echo "Service running on dynamically assigned port"
+          echo "Port would be accessible via: job.services.web.ports[80]"
+
+  # Container networking demonstration
+  networking-demo:
+    name: Container Networking
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    
+    services:
+      service-a:
+        image: alpine:latest
+        # Service keeps running
+        options: --entrypoint sh
+        # Commands keep container alive
+        env:
+          COMMAND: "while true; do sleep 10; done"
+      
+      service-b:
+        image: alpine:latest
+        options: --entrypoint sh
+    
+    steps:
+      - name: Show networking
+        run: |
+          echo "Services on same Docker network"
+          echo "Can reference by service label"
+          # Containers expose all ports to each other
+          # No port mapping needed between containers
+
+  # Volume mounting example
+  volume-example:
+    name: Container with Volumes
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+      volumes:
+        # Named volume
+        - app_data:/data
+        # Bind mount (absolute paths)
+        - /home/runner/work:/workspace
+        # Relative paths for repository
+        - ${{ github.workspace }}:/repo:rw
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use volumes
+        run: |
+          echo "Data in /data volume"
+          echo "test" > /data/test.txt
+          ls -la /workspace || echo "Workspace mount"
+          ls -la /repo
+
+  # Full example: Testing with database
+  integration-test:
+    name: Integration Test with DB
+    runs-on: ubuntu-latest
+    container: node:20-bookworm-slim
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y postgresql-client
+      - name: Run migrations
+        run: |
+          PGPASSWORD=testpass psql -h postgres -U testuser -d testdb -c '
+            CREATE TABLE IF NOT EXISTS products (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100),
+              price DECIMAL(10,2)
+            );'
+      - name: Insert test data
+        run: |
+          PGPASSWORD=testpass psql -h postgres -U testuser -d testdb -c "
+            INSERT INTO products (name, price) VALUES 
+            ('Widget', 19.99),
+            ('Gadget', 29.99);"
+      - name: Query test data
+        run: |
+          PGPASSWORD=testpass psql -h postgres -U testuser -d testdb -c 'SELECT * FROM products;'
+
+  # Container vs Runner comparison
+  networking-comparison:
+    name: Networking Differences
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        include:
+          # When job runs on runner (not in container)
+          - scenario: "runner-localhost"
+            container: ""
+            host: "localhost"
+          # When job runs in container
+          - scenario: "container-service-label"
+            container: "ubuntu:22.04"
+            host: "redis"
+    
+    container: ${{ matrix.container }}
+    
+    services:
+      redis:
+        image: redis:7
+        ports:
+          # Only needed when job runs on runner
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Install redis-tools
+        run: |
+          if [ -f /etc/apt/sources.list ]; then
+            apt-get update && apt-get install -y redis-tools || true
+          else
+            apk add redis || true
+          fi
+      - name: Test connection
+        run: |
+          echo "Testing with host: ${{ matrix.host }}"
+          redis-cli -h ${{ matrix.host }} ping || echo "Connection failed"
+
+  # Service health checks demonstration
+  health-checks:
+    name: Service Health Checks
+    runs-on: ubuntu-latest
+    
+    services:
+      # Without health checks (may not be ready)
+      fast-service:
+        image: redis:7
+      
+      # With health checks (guaranteed ready)
+      safe-service:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Health checks ensure service readiness
+        run: |
+          echo "safe-service is guaranteed to be ready"
+          echo "fast-service might not be ready yet"
