@@ -13,6 +13,9 @@ jobs:
   upload-image:
     runs-on: ubuntu-latest
     steps:
+      - name: Install dependencies
+        run: pip install matplotlib numpy
+        
       - name: Create image with matplotlib
         run: |
           import matplotlib.pyplot as plt
