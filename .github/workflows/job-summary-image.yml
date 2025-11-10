@@ -36,7 +36,9 @@ jobs:
         shell: python
 
       - name: Upload image as asset
-        run: ./scripts/upload-github-asset.sh output.png 512420494
+        run: |
+          chmod +x ./scripts/upload-github-asset.sh
+          ./scripts/upload-github-asset.sh output.png 512420494
 
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
