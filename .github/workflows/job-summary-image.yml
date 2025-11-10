@@ -1,5 +1,3 @@
-name: An Image in the Job Summary
-
 on: workflow_dispatch
 
 jobs:
