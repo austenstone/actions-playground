@@ -7,7 +7,6 @@ jobs:
       - uses: actions/github-script@v6
         with:
           script: |
-            const core = require('@actions/core');
             await core.summary
               .addImage('https://octodex.github.com/images/minion.png', 'GitHub Octocat Minion', {width: '200', height: '200'})
               .write();
