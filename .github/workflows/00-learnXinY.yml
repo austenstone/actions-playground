@@ -277,7 +277,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
+          # cache: "npm"
       # Leverage caching to speed up builds
       - name: Cache node modules
         id: cache-npm
