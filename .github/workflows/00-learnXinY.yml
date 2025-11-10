@@ -149,7 +149,7 @@ jobs:
           echo "Node version: $NODE_VERSION" # print job level environment variable
           echo "GitHub Token: ${{ secrets.GITHUB_TOKEN }}" # Secrets are automatically masked in logs
           echo "Value: $myIntegerNumber" # print step level environment variable
-          echo "step-output=Hello, World!" >> $GITHUB_OUTPUT # Set step output
+          echo "step-output=Hello, World!" >> "$GITHUB_OUTPUT" # Set step output using Environment Files
           echo "::group::Examples"
           echo "::add-mask::This is secret and masked"
           echo "::debug::This is a debug message"
@@ -243,8 +243,7 @@ jobs:
       - name: Inline Composite Action
         uses: ./.github/actions/javascript-action
         with:
-          name: "GitHub Actions"
-          greeting: "Hello"
+          who-to-greet: "GitHub Actions"
 
   # Job with conditions and matrix strategy
   build-matrix:
