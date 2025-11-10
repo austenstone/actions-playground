@@ -17,6 +17,7 @@ jobs:
   upload-image:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - name: Install dependencies
         run: pip install matplotlib numpy
 
