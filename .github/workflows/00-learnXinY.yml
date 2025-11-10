@@ -298,7 +298,7 @@ jobs:
         continue-on-error: true
         run: npm list
 
-      - run: npm init # Not necessary
+      - run: npm init -y # Just for the example
       - run: npm i
       - run: npm run build
       - run: npm test

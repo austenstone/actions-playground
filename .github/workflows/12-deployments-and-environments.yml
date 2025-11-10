@@ -26,7 +26,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build
   build:
     name: Build Application
     runs-on: ubuntu-latest
