@@ -1,40 +1,58 @@
 name: 12. Deployments and Environments
 
-# Trigger the deployment workflow
+# Environments provide deployment protection and secrets
+# Configure in: Settings > Environments
+# See: https://docs.github.com/en/actions/deployment/targeting-different-environments
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
-# Environment variables
-env:
-  APP_VERSION: "1.0.0"
-
-# Concurrency ensures only one deployment runs at a time
+# Prevent concurrent deployments
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false # Don't cancel in-progress deployments
+  cancel-in-progress: false
 
 jobs:
-  # Build job - runs before deployment
+  # Build
   build:
     name: Build Application
     runs-on: ubuntu-latest
+    
     outputs:
+      version: ${{ steps.version.outputs.version }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    
     steps:
       - uses: actions/checkout@v5
-
+      
+      - name: Set version
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
       - name: Build application
         run: |
-          echo "Building application..."
           mkdir -p dist
-          echo "Build complete at $(date)" > dist/build.txt
-          echo "Version: ${{ env.APP_VERSION }}" >> dist/build.txt
-
-      - name: Upload build artifacts
+          echo "Version: ${{ steps.version.outputs.version }}" > dist/build.txt
+          echo "Commit: ${{ github.sha }}" >> dist/build.txt
+          echo "Built at: $(date)" >> dist/build.txt
+      
+      - name: Upload artifacts
         id: upload
         uses: actions/upload-artifact@v4
         with:
@@ -42,109 +60,89 @@ jobs:
           path: dist/
           retention-days: 5
 
-  # Staging deployment with environment protection
+  # Deploy to Staging
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: build
     
-    # Reference the staging environment
     environment:
       name: staging
       url: https://staging.example.com
-
-    # Job-level concurrency for staging
+    
     concurrency:
       group: staging-deployment
       cancel-in-progress: true
-
+    
     steps:
-      - uses: actions/checkout@v5
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: ./dist
-
+      
       - name: Deploy to staging
         run: |
-          echo "Deploying to staging environment..."
-          echo "Environment: staging"
+          echo "🚀 Deploying to staging..."
+          echo "Version: ${{ needs.build.outputs.version }}"
           echo "URL: https://staging.example.com"
           cat dist/build.txt
-
-      - name: Run smoke tests
+      
+      - name: Smoke tests
         run: |
-          echo "Running smoke tests on staging..."
-          echo "All tests passed! ✅"
+          echo "Running smoke tests..."
+          echo "✅ Health check passed"
+          echo "✅ API tests passed"
 
-  # Production deployment with required approvals
+  # Deploy to Production
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [build, deploy-staging]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     
-    # Reference the production environment (requires approval)
     environment:
       name: production
       url: https://production.example.com
-
-    # Strict concurrency for production - never cancel
+    
     concurrency:
       group: production-deployment
       cancel-in-progress: false
-
+    
     steps:
-      - uses: actions/checkout@v5
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: ./dist
-
+      
       - name: Deploy to production
         run: |
-          echo "🚀 Deploying to production environment..."
-          echo "Version: ${{ env.APP_VERSION }}"
+          echo "🚀 Deploying to production..."
+          echo "Version: ${{ needs.build.outputs.version }}"
           echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
           cat dist/build.txt
-
+      
       - name: Health check
         run: |
           echo "Running production health checks..."
-          echo "Health check passed! 🎉"
-
+          echo "✅ All systems operational"
+      
       - name: Create deployment record
         run: |
-          echo "Deployment completed at: $(date)"
-          echo "Deployed by: ${{ github.actor }}"
-          echo "Repository: ${{ github.repository }}"
+          echo "📝 Deployment Record"
+          echo "Time: $(date)"
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "By: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
 
-  # Rollback job (can be triggered manually)
-  rollback:
-    name: Rollback Deployment
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: production
-      url: https://production.example.com
-
-    steps:
-      - name: Perform rollback
-        run: |
-          echo "⚠️ Rolling back to previous version..."
-          echo "This is a manual rollback procedure"
-          echo "Previous version restored"
-
-  # Multi-environment deployment with matrix
+  # Multi-Region Deployment
   deploy-regions:
     name: Deploy to ${{ matrix.region }}
     runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: github.event_name == 'workflow_dispatch'
+    needs: deploy-production
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
     
     strategy:
       matrix:
@@ -153,37 +151,78 @@ jobs:
     environment:
       name: production-${{ matrix.region }}
       url: https://${{ matrix.region }}.example.com
-
+    
     concurrency:
       group: deploy-${{ matrix.region }}
       cancel-in-progress: false
-
+    
     steps:
       - name: Deploy to region
         run: |
-          echo "Deploying to ${{ matrix.region }}..."
-          echo "Region URL: https://${{ matrix.region }}.example.com"
+          echo "🌎 Deploying to ${{ matrix.region }}..."
+          echo "URL: https://${{ matrix.region }}.example.com"
+          echo "Version: ${{ needs.build.outputs.version }}"
 
-  # Deployment status notification
+  # Notification
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [deploy-production]
+    needs: [build, deploy-production]
     if: always() && github.ref == 'refs/heads/main'
-
+    
     steps:
       - name: Check deployment status
         run: |
           if [[ "${{ needs.deploy-production.result }}" == "success" ]]; then
             echo "✅ Deployment successful!"
+            echo "Version: ${{ needs.build.outputs.version }}"
             echo "Status: Success"
+          elif [[ "${{ needs.deploy-production.result }}" == "skipped" ]]; then
+            echo "⏭️  Deployment skipped"
           else
             echo "❌ Deployment failed!"
-            echo "Status: Failed"
+            echo "Status: ${{ needs.deploy-production.result }}"
           fi
-
-      - name: Send notification
+      
+      - name: Create summary
         run: |
-          echo "Sending deployment notification..."
-          echo "To: team@example.com"
-          echo "Subject: Deployment ${{ needs.deploy-production.result }}"
+          echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+  # Environment Reference
+  environment-info:
+    name: Environment Features
+    runs-on: ubuntu-latest
+    if: false # Reference only
+    
+    steps:
+      - name: About Environments
+        run: |
+          echo "📚 Environment Features:"
+          echo ""
+          echo "Protection Rules:"
+          echo "- Required reviewers"
+          echo "- Wait timer"
+          echo "- Deployment branches"
+          echo ""
+          echo "Environment Secrets:"
+          echo "- Scoped to specific environment"
+          echo "- Override repository secrets"
+          echo "- Access in: Settings > Environments"
+          echo ""
+          echo "Environment Variables:"
+          echo "- Non-sensitive environment config"
+          echo "- Available via vars context"
+          echo ""
+          echo "Concurrency:"
+          echo "- Prevents overlapping deployments"
+          echo "- cancel-in-progress: false (production)"
+          echo "- cancel-in-progress: true (staging)"
+          echo ""
+          echo "Environment URLs:"
+          echo "- Displayed in deployment view"
+          echo "- Linked from workflow runs"

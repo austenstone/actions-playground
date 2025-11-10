@@ -3,6 +3,7 @@ name: 07. Permissions
 # Permissions control what GITHUB_TOKEN can access
 # Default: read-all for public repos, read contents for private repos
 # Best practice: Use least-privilege (only grant what's needed)
+# See: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 
 on:
   push:
@@ -13,156 +14,175 @@ on:
 
 # Workflow-level permissions (apply to all jobs unless overridden)
 permissions:
-  contents: read        # Read repository contents
-  pull-requests: write  # Create/update PRs
-  issues: write         # Create/update issues
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
-  default-permissions:
-    runs-on: ubuntu-latest
-    # Default permissions are granted when none are specified
-    steps:
-      - uses: actions/checkout@v5
-      - name: Test Default Access
-        run: |
-          echo "Can read repo contents (inherited from workflow)"
-          gh api /repos/${{ github.repository }}
-        env:
-          # You must pass the GITHUB_TOKEN to use the gh cli
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  override-permissions:
+  # Using GITHUB_TOKEN
+  github-token:
+    name: GITHUB_TOKEN Basics
     runs-on: ubuntu-latest
     
-    # Job-level permissions override workflow-level
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: About GITHUB_TOKEN
+        run: |
+          echo "GITHUB_TOKEN is automatically provided"
+          echo "No need to create or store it"
+          echo "Scoped to the current repository"
+          echo "Expires after the workflow run"
+      
+      - name: Use with GitHub CLI
+        run: |
+          gh repo view --json name,description
+          gh api /repos/${{ github.repository }} --jq '.name'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check rate limits
+        run: gh api rate_limit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Permission Levels
+  read-only:
+    name: Read-Only Permissions
+    runs-on: ubuntu-latest
+    
     permissions:
       contents: read
-      issues: write
-    
-    steps:
-      - name: Create Issue Comment
-        run: |
-          echo "This job can write issues but not PRs"
-          gh issue comment 1 --body "Test comment"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Restrictive Permissions
-  no-permissions:
-    name: No Permissions
-    runs-on: ubuntu-latest
-    
-    # Disable all permissions
-    permissions: {}
-    
-    steps:
-      - name: No API Access
-        run: |
-          echo "This job has no GitHub API access"
-          echo "Useful for untrusted code or when no API calls needed"
-
-  read-only:
-    name: Read-Only Access
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read # Read only permissions (best practice)
     
     steps:
       - uses: actions/checkout@v5
-      - name: Can read but not write
-        run: gh api /repos/${{ github.repository }} --jq '.name'
+      
+      - name: Read operations
+        run: |
+          echo "✓ Can read repository contents"
+          echo "✗ Cannot push commits or create releases"
+          gh repo view --json name
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   write-access:
-    name: Write Access
+    name: Write Permissions
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     permissions:
-      contents: write       # Push commits, create tags
-      pull-requests: write  # Create/update PRs
-      issues: write         # Create/update issues
+      contents: write
+      issues: write
+      pull-requests: write
     
     steps:
       - uses: actions/checkout@v5
-      - name: Write Operations
+      
+      - name: Write operations
         run: |
-          echo "Can perform write operations"
-          # git tag v1.0.0
-          # git push origin v1.0.0
+          echo "✓ Can push commits"
+          echo "✓ Can create/update issues and PRs"
+          echo "✓ Can create tags and releases"
 
-  # ID Token Permission (OIDC)
-  oidc-token:
-    name: OIDC Token Access
+  no-permissions:
+    name: No Permissions
     runs-on: ubuntu-latest
     
-    permissions:
-      id-token: write  # Request OIDC JWT token
-      contents: read
+    permissions: {}
     
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/MyRole
-          aws-region: us-east-1
-      - run: aws sts get-caller-identity
+      - name: Restricted environment
+        run: |
+          echo "No GitHub API access"
+          echo "Useful for untrusted code"
+          echo "Or when no API access needed"
 
+  # Specific Permission Types
   packages:
-    name: Package Registry Access
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      packages: write  # Publish to GitHub Packages
-    
-    steps:
-      - uses: actions/checkout@v5
-      - run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
-          docker push ghcr.io/${{ github.repository }}:latest
-
-  # Security Permissions
-  security:
-    name: Security Scanning
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      security-events: write  # Upload SARIF results
-    
-    steps:
-      - uses: actions/checkout@v5
-      - run: echo "Running security scan"
-      - uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: results.sarif
-
-  all-permissions-reference:
-    name: All Permissions Reference
+    name: Package Registry
     runs-on: ubuntu-latest
     if: false # Reference only
     
-    # All Available Permissions
-    # See: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
     permissions:
-      actions: write             # Cancel/rerun workflows
-      attestations: write        # Create attestations
-      checks: write              # Create check runs
-      contents: write            # Push commits, create tags
-      deployments: write         # Create deployments
-      id-token: write            # Request OIDC token
-      issues: write              # Create/update issues
-      discussions: write         # Create/update discussions
-      packages: write            # Publish packages
-      pages: write               # Deploy to GitHub Pages
-      pull-requests: write       # Create/update PRs
-      repository-projects: write # Create/update projects
-      security-events: write     # Upload code scanning results
-      statuses: write            # Create commit statuses
+      contents: read
+      packages: write
     
     steps:
-      - run: echo "All permissions granted"
+      - uses: actions/checkout@v5
+      
+      - name: Login to GitHub Packages
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+      - name: Push to registry
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker push ghcr.io/${{ github.repository }}:latest
+
+  oidc-token:
+    name: OIDC Token (Cloud Access)
+    runs-on: ubuntu-latest
+    if: false # Reference only
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/MyRole
+          aws-region: us-east-1
+      
+      - name: Access AWS
+        run: aws sts get-caller-identity
+
+  security-scanning:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    if: false # Reference only
+    
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Run security scan
+        run: echo "Running security analysis..."
+      
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+  # Permission Reference
+  permissions-reference:
+    name: Permission Reference
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Available Permissions
+        run: |
+          echo "📚 Available Permissions:"
+          echo ""
+          echo "actions          - Cancel/rerun workflows"
+          echo "attestations     - Create attestations"
+          echo "checks           - Create check runs"
+          echo "contents         - Push commits, tags, releases"
+          echo "deployments      - Create deployments"
+          echo "discussions      - Create/update discussions"
+          echo "id-token         - Request OIDC JWT token"
+          echo "issues           - Create/update issues"
+          echo "packages         - Publish to GitHub Packages"
+          echo "pages            - Deploy to GitHub Pages"
+          echo "pull-requests    - Create/update pull requests"
+          echo "security-events  - Upload code scanning results"
+          echo "statuses         - Create commit statuses"
+          echo ""
+          echo "Values: read, write, none"
+          echo "Job-level overrides workflow-level"
+          echo ""
+          echo "See: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token"

@@ -1,7 +1,7 @@
 name: 06. Expressions
 
-# Expressions: ${{ ... }} - Evaluate values programmatically
-# Access contexts, use functions, perform operations, make decisions
+# Expressions: ${{ ... }} - Programmatically evaluate values
+# Use for: accessing contexts, calling functions, conditional logic
 
 on:
   push:
@@ -10,75 +10,24 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  WORKFLOW_VAR: 'Workflow level'
-
 jobs:
-  # =====================================
   # Literals & Basic Syntax
-  # =====================================
   literals:
     name: Literals & Basic Syntax
     runs-on: ubuntu-latest
     
     steps:
-      - name: Literal Types
-        env:
-          NULL_VAL: ${{ null }}
-          BOOL_VAL: ${{ false }}
-          INT_VAL: ${{ 42 }}
-          FLOAT_VAL: ${{ 3.14 }}
-          HEX_VAL: ${{ 0xFF }}
-          EXP_VAL: ${{ 1.5e3 }}
-          STRING_VAL: ${{ 'Hello World' }}
-          QUOTED_VAL: ${{ 'It''s escaped!' }}
+      - name: Data Types
         run: |
-          echo "Null: $NULL_VAL"
-          echo "Boolean: $BOOL_VAL"
-          echo "Integer: $INT_VAL"
-          echo "Float: $FLOAT_VAL"
-          echo "Hex: $HEX_VAL"
-          echo "Exponential: $EXP_VAL"
-          echo "String: $STRING_VAL"
-          echo "Quoted: $QUOTED_VAL"
+          echo "String: ${{ 'Hello World' }}"
+          echo "Number: ${{ 42 }}"
+          echo "Float: ${{ 3.14 }}"
+          echo "Boolean: ${{ true }}"
+          echo "Null: ${{ null }}"
+          echo "Hex: ${{ 0xFF }}"
+          echo "Scientific: ${{ 1.5e3 }}"
 
-  # =====================================
-  # Context Access
-  # =====================================
-  contexts:
-    name: Context Access
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: GitHub Context
-        run: |
-          echo "Actor: ${{ github.actor }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "Run #: ${{ github.run_number }}"
-      
-      - name: Runner Context
-        run: |
-          echo "OS: ${{ runner.os }}"
-          echo "Arch: ${{ runner.arch }}"
-          echo "Name: ${{ runner.name }}"
-          echo "Temp: ${{ runner.temp }}"
-      
-      - name: Job Context
-        run: echo "Status: ${{ job.status }}"
-      
-      - name: Step Outputs
-        id: demo
-        run: echo "result=success" >> $GITHUB_OUTPUT
-      
-      - name: Access Step Output
-        run: echo "Previous step: ${{ steps.demo.outputs.result }}"
-
-  # =====================================
   # Operators
-  # =====================================
   operators:
     name: Operators
     runs-on: ubuntu-latest
@@ -90,8 +39,8 @@ jobs:
           echo "Not equal: ${{ 5 != 3 }}"
           echo "Greater: ${{ 10 > 5 }}"
           echo "Less: ${{ 3 < 7 }}"
-          echo "Greater or equal: ${{ 5 >= 5 }}"
-          echo "Less or equal: ${{ 3 <= 7 }}"
+          echo "Greater/equal: ${{ 5 >= 5 }}"
+          echo "Less/equal: ${{ 3 <= 7 }}"
       
       - name: Logical Operators
         run: |
@@ -101,12 +50,11 @@ jobs:
       
       - name: Ternary Pattern
         env:
-          RESULT: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
-        run: echo "Environment: $RESULT"
+          ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+        run: |
+          echo "Environment: $ENV"
 
-  # =====================================
   # Functions
-  # =====================================
   functions:
     name: Built-in Functions
     runs-on: ubuntu-latest
@@ -114,94 +62,86 @@ jobs:
     steps:
       - name: String Functions
         run: |
-          echo "Contains: ${{ contains('hello world', 'world') }}"
-          echo "StartsWith: ${{ startsWith('hello', 'hel') }}"
-          echo "EndsWith: ${{ endsWith('hello', 'lo') }}"
-          echo "Format: ${{ format('Hello {0}!', 'World') }}"
-          echo "Join: ${{ join(github.event.commits.*.message, ', ') }}"
+          echo "contains: ${{ contains('hello world', 'world') }}"
+          echo "startsWith: ${{ startsWith('hello', 'hel') }}"
+          echo "endsWith: ${{ endsWith('hello', 'lo') }}"
+          echo "format: ${{ format('Hello {0}!', 'World') }}"
       
-      - name: Status Functions
+      - name: Always run
         if: always()
+        run: echo "always() - Always runs"
+      - name: Run on Success
+        if: success()
+        run: echo "success() - Runs when successful"
+      - name: Run on Failure
+        if: failure()
+        run: echo "failure() - Runs when failed"
+      - name: Run on Cancelled
+        if: cancelled()
+        run: echo "cancelled() - Runs when cancelled"
+
+      - name: JSON Functions
         run: |
-          echo "always() - This always runs"
-          echo "success() - Previous steps succeeded: ${{ success() }}"
-          echo "failure() - Previous step failed: ${{ failure() }}"
-          echo "cancelled() - Workflow cancelled: ${{ cancelled() }}"
-      
-      - name: Type Conversion
-        run: |
-          echo "toJSON: ${{ toJSON(github.event) }}"
+          echo "toJSON: ${{ toJSON(github.event_name) }}"
           echo "fromJSON: ${{ fromJSON('{"key": "value"}').key }}"
       
-      - name: Hash Files
+      - name: Hash Function
         run: |
-          echo "Hash: ${{ hashFiles('**/*.yml') }}"
+          echo "Hash of workflows: ${{ hashFiles('**/*.yml') }}"
 
-  # =====================================
   # Conditionals
-  # =====================================
   conditionals:
     name: Conditional Execution
     runs-on: ubuntu-latest
     
     steps:
-      - name: Always Runs
-        run: echo "This runs on all events"
-      
-      - name: Only on Push
+      - name: Event-Based
         if: github.event_name == 'push'
-        run: echo "Push event detected"
+        run: echo "✓ Push event"
       
-      - name: Only on Main
+      - name: Branch-Based
         if: github.ref == 'refs/heads/main'
-        run: echo "Running on main branch"
+        run: echo "✓ Main branch"
       
       - name: Multiple Conditions
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: echo "Push to main branch"
+        run: echo "✓ Push to main"
       
       - name: Pattern Matching
         if: contains(github.event.head_commit.message, '[skip ci]')
-        run: echo "Skip CI detected in commit message"
-
-  # =====================================
-  # Array & Object Filtering
-  # =====================================
-  filtering:
-    name: Array & Object Filtering
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-      - name: PR Label Check
-        if: contains(github.event.pull_request.labels.*.name, 'bug')
-        run: echo "This PR has a bug label"
+        run: echo "✓ Skip CI detected"
       
-      - name: Array Contains
-        if: contains(fromJSON('["dev", "staging", "prod"]'), 'staging')
-        run: echo "Environment is valid"
+      - name: Complex Logic
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch')
+        run: echo "✓ Complex condition met"
 
-  # =====================================
-  # Context Dumping
-  # =====================================
-  dump-contexts:
-    name: Dump All Contexts
+  # Context Access
+  context-access:
+    name: Context Access
     runs-on: ubuntu-latest
     
     steps:
-      - name: All Contexts
+      - name: GitHub Context
         run: |
-          echo "=== GitHub Context ===" 
-          echo '${{ toJSON(github) }}'
-          echo ""
-          echo "=== Env Context ==="
-          echo '${{ toJSON(env) }}'
-          echo ""
-          echo "=== Job Context ==="
-          echo '${{ toJSON(job) }}'
-          echo ""
-          echo "=== Runner Context ==="
-          echo '${{ toJSON(runner) }}'
+          echo "Actor: ${{ github.actor }}"
+          echo "Repo: ${{ github.repository }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref_name }}"
+      
+      - name: Runner Context
+        run: |
+          echo "OS: ${{ runner.os }}"
+          echo "Arch: ${{ runner.arch }}"
+      
+      - name: Step Outputs
+        id: demo
+        run: echo "result=success" >> $GITHUB_OUTPUT
+      
+      - name: Use Step Output
+        run: |
+          echo "Previous: ${{ steps.demo.outputs.result }}"
 
   # =====================================
   # Common Patterns
@@ -211,15 +151,22 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Default Value Pattern
+      - name: Default Value
         env:
           VALUE: ${{ github.event.inputs.value || 'default' }}
-        run: echo "Value $VALUE"
+        run: |
+          echo "Value: $VALUE"
+      
+      - name: Conditional Environment
+        env:
+          DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+        run: |
+          echo "Deploying to: $DEPLOY_ENV"
       
       - name: Dynamic Job Name
-        run: echo "Job ${{ github.job }}"
+        run: |
+          echo "Running job: ${{ github.job }}"
       
-      - name: Conditional Env Var
-        env:
-          DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-        run: echo "Deploying to $DEPLOY_ENV"
+      - name: Array Contains
+        if: contains(fromJSON('["dev", "staging", "prod"]'), 'staging')
+        run: echo "✓ Valid environment"
