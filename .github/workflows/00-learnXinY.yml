@@ -241,7 +241,7 @@ jobs:
 
         # Composite actions let your group multiple steps into a single yml file
       - name: Inline Composite Action
-        uses: ./.github/actions/hello-world
+        uses: ./.github/actions/javascript-action
         with:
           name: "GitHub Actions"
           greeting: "Hello"
