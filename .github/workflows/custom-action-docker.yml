@@ -1,3 +1,4 @@
+name: Custom Action Docker
 on:
   workflow_dispatch:
     inputs:
