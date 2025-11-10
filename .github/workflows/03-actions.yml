@@ -31,7 +31,7 @@ jobs:
         # The 'with' keyword passes inputs (parameters) to the action
         with:
           node-version: "20"
-          cache: "npm" # Built-in caching for package managers
+          # cache: "npm" # Built-in caching for package managers (requires package-lock.json)
 
       # Actions can have outputs that can be referenced
       - run: echo 'Node version ${{ steps.setup-node.outputs.node-version }}'
@@ -62,7 +62,7 @@ jobs:
         with:
           node-version: "20"
       # Commit SHA - Most secure, immutable
-      - uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}
@@ -166,7 +166,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          # cache: "pip" # Requires requirements.txt or pyproject.toml
 
       # Setup Go with automatic module caching
       - name: Setup Go
