@@ -1,4 +1,8 @@
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/job-summary-image.yml"
 
 jobs:
   github-script:
@@ -15,7 +19,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: pip install matplotlib numpy
-        
+
       - name: Create image with matplotlib
         run: |
           import matplotlib.pyplot as plt
@@ -29,13 +33,16 @@ jobs:
           plt.savefig('output.png', dpi=150, bbox_inches='tight')
           print("✅ Image created successfully!")
         shell: python
-        
+
+      - name: Upload image as asset
+        run: ./scripts/upload-github-asset.sh output.png 512420494
+
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
         with:
           name: generated-visualization
           path: output.png
-          
+
       - name: Add image to job summary
         run: |
           echo "## Generated Visualization 📊" >> $GITHUB_STEP_SUMMARY
