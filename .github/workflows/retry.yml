@@ -1,19 +1,15 @@
 name: Retry failed jobs
 
 on:
-  # push:
-  #   branches: [ "main" ]
-  # pull_request:
-  #   branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - run: exit $((RANDOM % 2))
-      - run: gh workflow run rerun.yml --repo austenstone/.github -f run_id=$GITHUB_RUN_ID
+      - run: gh workflow run retry.yml --repo austenstone/.github -f run_id=$GITHUB_RUN_ID
         if: failure()
         env:
             GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}

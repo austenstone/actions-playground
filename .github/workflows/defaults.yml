@@ -2,6 +2,7 @@ name: Defaults
 
 on: workflow_dispatch
 
+# Default settings for all jobs and steps
 defaults:
   run:
     shell: bash

@@ -1,12 +1,10 @@
 # Merge pull request when label is added
 name: On PR Label Merge
 
-# On pull request labeled
 on:
-  workflow_dispatch:
-  # pull_request:
-  #   branches: [ "main" ]
-  #   types: [ labeled ]
+  pull_request:
+    branches: [ "main" ]
+    types: [ labeled ] # On pull request labeled
 
 jobs:
   merge:
@@ -15,7 +13,7 @@ jobs:
       github.event.label.name == 'Merge' ||
       github.event.label.name == 'merge'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - run: gh pr merge ${{ github.event.pull_request.number }} --rebase --auto
         env:
           GH_TOKEN: ${{ secrets.AUSTEN_PAT }}

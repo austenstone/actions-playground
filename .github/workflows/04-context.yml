@@ -114,7 +114,7 @@ jobs:
     
     steps:
       # Most actions will use the default GITHUB_TOKEN
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Using GITHUB_TOKEN
         env:

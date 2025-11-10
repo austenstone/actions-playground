@@ -1,0 +1,21 @@
+on:
+  workflow_dispatch:
+    inputs:
+      who-to-greet:
+        description: 'Who to greet'
+        required: true
+        default: 'Mona the Octocat'
+
+jobs:
+  hello_world_job:
+    runs-on: ubuntu-latest
+    name: A job to say hello
+    steps:
+      - name: Hello world action step
+        id: hello
+        uses: austenstone/actions-playground/.github/actions/docker-action@main
+        with:
+          who-to-greet: ${{ github.event.inputs.who-to-greet }}
+      # Use the output from the `hello` step
+      - name: Get the output
+        run: echo "The greeting was ${{ steps.hello.outputs.greeting }}"

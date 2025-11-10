@@ -1,4 +1,5 @@
 name: 02. Triggers & Context
+run-name: Run ${{ inputs.example-input || '' }} by @${{ github.actor }}
 
 # Workflow triggers are events that cause a workflow to run.
 # There are 30+ triggers for all kinds of GitHub events.

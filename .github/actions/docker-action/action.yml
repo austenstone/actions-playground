@@ -6,13 +6,17 @@ branding:
   color: "blue"
 
 inputs:
-  token:
-    description: The GitHub token used to create an authenticated client
-    default: ${{ github.token }}
+  who-to-greet:
+    description: 'Who to greet'
+    default: 'Mona the Octocat'
     required: false
+
+outputs:
+  greeting:
+    description: 'The greeting message'
 
 runs:
   using: "docker"
   image: "Dockerfile"
   args:
-    - ${{ inputs.token }}
+    - ${{ inputs.who-to-greet }}

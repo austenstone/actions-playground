@@ -21,7 +21,7 @@ jobs:
     steps:
       # actions/checkout - The most fundamental action
       # The 'uses' keyword specifies the action to run
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # actions/setup-node - Setup actions configure programming environments
       - name: Setup Node.js
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Major version (recommended) - Gets latest v4.x.x
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Specific version - Pins to exact release
       - uses: actions/setup-node@v4.1.0
         with:
@@ -76,7 +76,7 @@ jobs:
     name: Create Artifacts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Create test files
         run: |
@@ -126,7 +126,7 @@ jobs:
     name: Custom Actions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Composite action - Bundles multiple steps together
       - name: Run composite action
@@ -136,7 +136,7 @@ jobs:
 
       # JavaScript action - Node.js action
       - name: Run JavaScript action
-        uses: ./.github/actions/hello-world-javascript-action
+        uses: ./.github/actions/javascript-action
         with:
           who-to-greet: 'JavaScript User'
 
@@ -157,7 +157,7 @@ jobs:
     name: Community Actions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Needed for change detection
 
