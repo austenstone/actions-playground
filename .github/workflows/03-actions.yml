@@ -36,6 +36,7 @@ jobs:
       # Actions can have outputs that can be referenced
       - run: echo 'Node version ${{ steps.setup-node.outputs.node-version }}'
       
+      - run: npm init # Just for the example
       - name: Install dependencies
         run: npm ci
 
@@ -181,7 +182,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
-          cache: "maven"
+          # cache: "maven" # Requires pom.xml or build.gradle
 
       # actions/github-script - Run JavaScript with GitHub API access
       - name: Use GitHub Script
