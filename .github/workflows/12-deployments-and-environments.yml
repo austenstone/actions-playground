@@ -1,5 +1,6 @@
 name: 12. Deployments and Environments
 
+# Trigger the deployment workflow
 on:
   push:
     branches: [main]
@@ -7,6 +8,182 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Environment variables
+env:
+  APP_VERSION: "1.0.0"
+
+# Concurrency ensures only one deployment runs at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false # Don't cancel in-progress deployments
+
 jobs:
+  # Build job - runs before deployment
   build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build application
+        run: |
+          echo "Building application..."
+          mkdir -p dist
+          echo "Build complete at $(date)" > dist/build.txt
+          echo "Version: ${{ env.APP_VERSION }}" >> dist/build.txt
+
+      - name: Upload build artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+          retention-days: 5
+
+  # Staging deployment with environment protection
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
     
+    # Reference the staging environment
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    # Job-level concurrency for staging
+    concurrency:
+      group: staging-deployment
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./dist
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Environment: staging"
+          echo "URL: https://staging.example.com"
+          cat dist/build.txt
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests on staging..."
+          echo "All tests passed! ✅"
+
+  # Production deployment with required approvals
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    
+    # Reference the production environment (requires approval)
+    environment:
+      name: production
+      url: https://production.example.com
+
+    # Strict concurrency for production - never cancel
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./dist
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production environment..."
+          echo "Version: ${{ env.APP_VERSION }}"
+          echo "Commit: ${{ github.sha }}"
+          cat dist/build.txt
+
+      - name: Health check
+        run: |
+          echo "Running production health checks..."
+          echo "Health check passed! 🎉"
+
+      - name: Create deployment record
+        run: |
+          echo "Deployment completed at: $(date)"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Repository: ${{ github.repository }}"
+
+  # Rollback job (can be triggered manually)
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment:
+      name: production
+      url: https://production.example.com
+
+    steps:
+      - name: Perform rollback
+        run: |
+          echo "⚠️ Rolling back to previous version..."
+          echo "This is a manual rollback procedure"
+          echo "Previous version restored"
+
+  # Multi-environment deployment with matrix
+  deploy-regions:
+    name: Deploy to ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'workflow_dispatch'
+    
+    strategy:
+      matrix:
+        region: [us-east, us-west, eu-west]
+    
+    environment:
+      name: production-${{ matrix.region }}
+      url: https://${{ matrix.region }}.example.com
+
+    concurrency:
+      group: deploy-${{ matrix.region }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy to region
+        run: |
+          echo "Deploying to ${{ matrix.region }}..."
+          echo "Region URL: https://${{ matrix.region }}.example.com"
+
+  # Deployment status notification
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check deployment status
+        run: |
+          if [[ "${{ needs.deploy-production.result }}" == "success" ]]; then
+            echo "✅ Deployment successful!"
+            echo "Status: Success"
+          else
+            echo "❌ Deployment failed!"
+            echo "Status: Failed"
+          fi
+
+      - name: Send notification
+        run: |
+          echo "Sending deployment notification..."
+          echo "To: team@example.com"
+          echo "Subject: Deployment ${{ needs.deploy-production.result }}"

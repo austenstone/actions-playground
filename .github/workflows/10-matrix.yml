@@ -1,3 +1,6 @@
+# Matrix strategies let you run a job multiple times with different configurations
+# This is useful for testing across multiple OS, language versions, etc.
+
 name: 10. Matrix Builds
 
 on:
@@ -8,3 +11,135 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Basic matrix example
+  basic-matrix:
+    name: Build on ${{ matrix.os }} with Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      # Matrix creates 6 jobs (3 OS × 2 Node versions)
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20]
+    
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --version
+      - run: echo "Running on ${{ matrix.os }}"
+
+  # Matrix with exclude
+  matrix-exclude:
+    name: Matrix with exclusions
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [16, 18, 20]
+        # Exclude specific combinations
+        exclude:
+          - os: windows-latest
+            node: 16
+          - os: macos-latest
+            node: 16
+    
+    steps:
+      - run: echo "Node ${{ matrix.node }} on ${{ matrix.os }}"
+
+  # Matrix with include (add configurations)
+  matrix-include:
+    name: Matrix with additions
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20]
+        # Add specific configurations
+        include:
+          # Add experimental version to all combinations
+          - experimental: false
+          # Add macOS with Node 20 only
+          - os: macos-latest
+            node: 20
+            experimental: true
+    
+    steps:
+      - run: echo "Node ${{ matrix.node }} on ${{ matrix.os }}"
+      - if: matrix.experimental
+        run: echo "🧪 Experimental build"
+
+  # Matrix with fail-fast and max-parallel
+  matrix-control:
+    name: Controlled matrix execution
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      # Don't cancel other jobs if one fails
+      fail-fast: false
+      # Run maximum 2 jobs at a time
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20]
+    
+    steps:
+      - run: echo "Node ${{ matrix.node }} on ${{ matrix.os }}"
+      - run: sleep 10  # Simulate work
+
+  # Dynamic matrix from JSON
+  define-matrix:
+    name: Define dynamic matrix
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set-matrix.outputs.versions }}
+    
+    steps:
+      - id: set-matrix
+        run: |
+          # Create matrix dynamically
+          echo 'versions=["18", "20", "22"]' >> $GITHUB_OUTPUT
+
+  use-dynamic-matrix:
+    name: Use dynamic matrix - Node ${{ matrix.node }}
+    needs: define-matrix
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        # Use output from previous job
+        node: ${{ fromJSON(needs.define-matrix.outputs.versions) }}
+    
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --version
+
+  # Matrix with continue-on-error
+  matrix-experimental:
+    name: Matrix with experimental versions
+    runs-on: ubuntu-latest
+    # Allow experimental versions to fail without failing the workflow
+    continue-on-error: ${{ matrix.experimental }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+        experimental: [false]
+        include:
+          # Add experimental version that can fail
+          - node: 22
+            experimental: true
+    
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --version
+      - if: matrix.experimental
+        run: echo "⚠️ Experimental version - failure is allowed"
