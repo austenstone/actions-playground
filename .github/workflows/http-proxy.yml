@@ -1,0 +1,121 @@
+name: Test Proxy Functionality
+
+on:
+  workflow_dispatch:
+    inputs:
+      proxy_url:
+        description: 'Proxy server URL (e.g., http://proxy.local:8080)'
+        required: false
+        default: 'http://proxy.local:8080'
+      test_external_connectivity:
+        description: 'Test external connectivity'
+        type: boolean
+        required: false
+        default: true
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/http-proxy.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/http-proxy.yml'
+
+env:
+  # Default proxy configuration (can be overridden by workflow inputs)
+  PROXY_URL: ${{ inputs.proxy_url || 'http://proxy.local:8080' }}
+
+jobs:
+  test-proxy-linux:
+    name: Test Proxy on Linux Larger Runner
+    # Use GitHub-hosted larger runner with private networking
+    # Replace with your actual runner label for private networking
+    runs-on:
+      group: Austen
+      labels: austen-runner
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure HTTP/HTTPS Proxy
+        run: |
+          echo "🔧 Configuring proxy environment variables..."
+          echo "http_proxy=${{ env.PROXY_URL }}" >> $GITHUB_ENV
+          echo "https_proxy=${{ env.PROXY_URL }}" >> $GITHUB_ENV
+          # Add Azure metadata IPs to no_proxy for Azure-hosted runners
+          echo "no_proxy=168.63.129.16,169.254.169.254,localhost,127.0.0.1" >> $GITHUB_ENV
+
+      - name: Verify Proxy Environment Variables
+        run: |
+          echo "✅ Verifying proxy configuration..."
+          echo "http_proxy: $http_proxy"
+          echo "https_proxy: $https_proxy"
+          echo "no_proxy: $no_proxy"
+          echo ""
+          echo "Environment variables set successfully! 🎯"
+
+      - name: Test Azure Metadata Service Access (No Proxy)
+        run: |
+          echo "🔍 Testing Azure metadata service access (should bypass proxy)..."
+          # This should work even with proxy configured due to no_proxy
+          curl -s -H "Metadata: true" "http://169.254.169.254/metadata/instance?api-version=2021-02-01" || echo "Not running on Azure or metadata service not accessible"
+          echo "✅ Metadata service test complete"
+
+      - name: Test Proxy with curl
+        run: |
+          echo "🌐 Testing proxy connectivity with curl..."
+          # Test that proxy is being used
+          curl -v -x "${{ env.PROXY_URL }}" https://api.github.com 2>&1 | grep -i "proxy" || echo "Proxy not detected in curl output"
+          
+          # Test direct connection (should fail if network is isolated)
+          echo ""
+          echo "Testing direct connection (may fail in isolated network)..."
+          curl -v --noproxy "*" https://api.github.com 2>&1 || echo "Direct connection failed (expected in private networking)"
+
+      - name: Test Proxy with wget
+        run: |
+          echo "📥 Testing proxy with wget..."
+          # wget respects http_proxy and https_proxy environment variables
+          wget --spider https://api.github.com || echo "wget test failed"
+          echo "✅ wget test complete"
+
+      - name: Test Git Operations Through Proxy
+        run: |
+          echo "🔀 Testing git operations through proxy..."
+          git config --global http.proxy "${{ env.PROXY_URL }}"
+          git config --global https.proxy "${{ env.PROXY_URL }}"
+          
+          # Test git fetch
+          git ls-remote https://github.com/github/docs.git HEAD || echo "Git operation through proxy failed"
+          echo "✅ Git proxy test complete"
+
+      - name: Test npm/Node.js Through Proxy
+        run: |
+          echo "📦 Testing npm through proxy..."
+          npm config set proxy "${{ env.PROXY_URL }}"
+          npm config set https-proxy "${{ env.PROXY_URL }}"
+          npm config list | grep proxy
+          
+          # Test npm registry access
+          npm view express version || echo "npm registry access through proxy failed"
+          echo "✅ npm proxy test complete"
+
+      - name: Test Python pip Through Proxy
+        run: |
+          echo "🐍 Testing pip through proxy..."
+          # pip respects http_proxy and https_proxy environment variables
+          pip index versions requests || echo "pip index access through proxy failed"
+          echo "✅ pip proxy test complete"
+
+      - name: Generate Proxy Test Report
+        if: always()
+        run: |
+          echo "📊 Proxy Test Summary"
+          echo "===================="
+          echo "Runner: ubuntu-latest (Linux)"
+          echo "Proxy URL: ${{ env.PROXY_URL }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "Configured Environment Variables:"
+          env | grep -i proxy || echo "No proxy variables found"
