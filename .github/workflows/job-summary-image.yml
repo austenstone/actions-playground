@@ -20,11 +20,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - name: Install dependencies
-        run: pip install matplotlib numpy
-
-      - name: Create image with matplotlib
-        run: |
+      - run: pip install matplotlib numpy
+      - run: |
           import matplotlib.pyplot as plt
           import numpy as np
 
@@ -37,14 +34,12 @@ jobs:
           print("✅ Image created successfully!")
         shell: python
 
-      - name: Upload via Copilot Chat Attachments
-        id: upload-image
+      - id: upload-image
         uses: austenstone/file-upload@main
         with:
           path: output.png
 
-      - name: Upload image as artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: generated-visualization
           path: output.png
