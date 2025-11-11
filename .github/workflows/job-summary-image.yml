@@ -35,6 +35,11 @@ jobs:
           print("✅ Image created successfully!")
         shell: python
 
+      - name: Upload via Copilot Chat Attachments
+        uses: austenstone/image-upload@master
+        with:
+          image: output.png
+
       - name: Upload image as asset
         run: |
           chmod +x ./scripts/upload-github-asset.sh
