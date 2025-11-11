@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload via Copilot Chat Attachments
         id: upload-image
-        uses: austenstone/image-upload@master
+        uses: austenstone/file-upload@main
         with:
           path: output.png
 
