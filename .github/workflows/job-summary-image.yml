@@ -39,7 +39,7 @@ jobs:
         id: upload-image
         uses: austenstone/image-upload@master
         with:
-          image: output.png
+          path: output.png
 
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
@@ -51,4 +51,4 @@ jobs:
         run: |
           echo "![Generated Image]($IMAGE_URL)" >> $GITHUB_STEP_SUMMARY
         env:
-          IMAGE_URL: ${{ steps.upload-image.outputs.image-url }}
+          IMAGE_URL: ${{ steps.upload-image.outputs.url }}
