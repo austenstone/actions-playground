@@ -41,11 +41,6 @@ jobs:
         with:
           image: output.png
 
-      - name: Upload image as asset
-        run: |
-          chmod +x ./scripts/upload-github-asset.sh
-          ./scripts/upload-github-asset.sh output.png 512420494
-
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
         with:
