@@ -30,9 +30,7 @@ jobs:
     name: Test Proxy on Linux Larger Runner
     # Use GitHub-hosted larger runner with private networking
     # Replace with your actual runner label for private networking
-    runs-on:
-      group: Austen
-      labels: austen-runner
+    runs-on: austen-runner
     
     steps:
       - name: Checkout code

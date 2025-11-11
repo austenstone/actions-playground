@@ -3,7 +3,7 @@
 # Usage: ./scripts/disable-actions.sh
 
 # Repository details
-OWNER="austenstone"
+OWNER="octodemo"
 REPO="actions-playground"
 
 echo "🔍 Fetching all workflows for ${OWNER}/${REPO}..."
@@ -13,7 +13,7 @@ echo ""
 WORKFLOWS_FILE=$(mktemp)
 gh api -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  "/repos/${OWNER}/${REPO}/actions/workflows" \
+  "repos/${OWNER}/${REPO}/actions/workflows" \
   --paginate \
   --jq '.workflows[] | "\(.id)\t\(.name)\t\(.state)"' > "$WORKFLOWS_FILE"
 
@@ -36,7 +36,7 @@ while IFS=$'\t' read -r id name state; do
     if gh api --method PUT \
       -H "Accept: application/vnd.github+json" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
-      "/repos/${OWNER}/${REPO}/actions/workflows/${id}/disable" > /dev/null 2>&1; then
+      "repos/${OWNER}/${REPO}/actions/workflows/${id}/disable" > /dev/null 2>&1; then
       echo "✅ Successfully disabled '$name'"
       ((disabled++))
     else
