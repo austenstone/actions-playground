@@ -36,6 +36,7 @@ jobs:
         shell: python
 
       - name: Upload via Copilot Chat Attachments
+        id: upload-image
         uses: austenstone/image-upload@master
         with:
           image: output.png
@@ -53,4 +54,6 @@ jobs:
 
       - name: Add image to job summary
         run: |
-          echo "![Generated Image](output.png)" >> $GITHUB_STEP_SUMMARY
+          echo "![Generated Image]($IMAGE_URL)" >> $GITHUB_STEP_SUMMARY
+        env:
+          IMAGE_URL: ${{ steps.upload-image.outputs.image-url }}
