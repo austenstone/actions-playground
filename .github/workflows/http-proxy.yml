@@ -29,7 +29,7 @@ jobs:
   test-proxy-linux:
     name: Test Proxy on Linux Larger Runner
     # Use GitHub-hosted larger runner with private networking
-    # Replace with your actual runner label for private networking
+    # Label must be added at: https://github.com/enterprises/octodemo/settings/actions/github-hosted-runners/48
     runs-on: austen-runner
     
     steps:
