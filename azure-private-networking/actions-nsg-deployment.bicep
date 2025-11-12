@@ -196,6 +196,37 @@ resource actions_NSG 'Microsoft.Network/networkSecurityGroups@2017-06-01' = {
           destinationAddressPrefixes: []
         }
       }
+      {
+        name: 'AllowInternetOutbound'
+        properties: {
+          protocol: 'TCP'
+          sourcePortRange: '*'
+          destinationPortRanges: [
+            '80'
+            '443'
+          ]
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: 'Internet'
+          access: 'Allow'
+          priority: 240
+          direction: 'Outbound'
+          destinationAddressPrefixes: []
+        }
+      }
+      {
+        name: 'AllowDnsOutbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '53'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: 'Internet'
+          access: 'Allow'
+          priority: 250
+          direction: 'Outbound'
+          destinationAddressPrefixes: []
+        }
+      }
     ]
   }
 }
