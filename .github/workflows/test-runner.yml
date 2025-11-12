@@ -1,0 +1,7 @@
+on: [push, workflow_dispatch]
+
+jobs:
+  test-runner:
+    runs-on: test-runner-private
+    steps:
+      - run: echo "Hello World"

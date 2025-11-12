@@ -64,6 +64,9 @@ This repository serves as a comprehensive collection of resources and examples d
 - [actions/runner-images](https://github.com/actions/runner-images) - Official runner images for GitHub Actions.
 - [actions/actions-runner-controller](https://github.com/actions/actions-runner-controller) - Kubernetes controller to manage self-hosted runners.
 
+### 🔒 Azure Private Networking
+- [azure-private-networking/](./azure-private-networking/) - Examples and configuration for GitHub-hosted runners with Azure VNET.
+
 ### 💼 Sales
 - [Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
 - [GitHub vs. other DevOps Tools](https://resources.github.com/devops/tools/compare/)
