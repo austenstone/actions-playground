@@ -1,0 +1,278 @@
+name: Deploy Multi-Cloud API Gateway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api-gateway/terraform/**'
+      - '.github/workflows/deploy-api-gateway.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'api-gateway/terraform/**'
+      - '.github/workflows/deploy-api-gateway.yml'
+  workflow_dispatch:
+    inputs:
+      cloud_provider:
+        description: 'Cloud provider to deploy (azure, aws, gcp, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - azure
+          - aws
+          - gcp
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      terraform_action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  setup:
+    name: Setup Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set up matrix
+        id: set-matrix
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.cloud_provider }}" != "all" ]; then
+            # Single cloud deployment
+            echo "matrix={\"include\":[{\"cloud\":\"${{ inputs.cloud_provider }}\",\"environment\":\"${{ inputs.environment }}\"}]}" >> $GITHUB_OUTPUT
+          else
+            # All clouds deployment
+            environment="${{ inputs.environment || 'dev' }}"
+            echo "matrix={\"include\":[{\"cloud\":\"azure\",\"environment\":\"$environment\"},{\"cloud\":\"aws\",\"environment\":\"$environment\"},{\"cloud\":\"gcp\",\"environment\":\"$environment\"}]}" >> $GITHUB_OUTPUT
+          fi
+
+  terraform:
+    name: Terraform ${{ matrix.cloud }} (${{ matrix.environment }})
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+      fail-fast: false
+    
+    defaults:
+      run:
+        working-directory: api-gateway/terraform/${{ matrix.cloud }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      # Azure Authentication
+      - name: Azure Login
+        if: matrix.cloud == 'azure'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # AWS Authentication
+      - name: Configure AWS Credentials
+        if: matrix.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          audience: api://ActionsOIDCGateway
+
+      # GCP Authentication
+      - name: Authenticate to Google Cloud
+        if: matrix.cloud == 'gcp'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          audience: api://ActionsOIDCGateway
+
+      - name: Setup GCP SDK
+        if: matrix.cloud == 'gcp'
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Terraform Init
+      - name: Terraform Init
+        run: terraform init
+        env:
+          # Azure
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+          # AWS uses configured credentials from previous step
+          # GCP uses configured credentials from previous step
+
+      # Terraform Format Check
+      - name: Terraform Format
+        run: terraform fmt -check
+        continue-on-error: true
+
+      # Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Create tfvars file
+      - name: Create terraform.tfvars
+        run: |
+          cat > terraform.tfvars << EOF
+          environment = "${{ matrix.environment }}"
+          github_org  = "${{ github.repository_owner }}"
+          github_repo = "${{ github.event.repository.name }}"
+          EOF
+          
+          # Add cloud-specific variables
+          if [ "${{ matrix.cloud }}" = "azure" ]; then
+            cat >> terraform.tfvars << EOF
+          azure_subscription_id = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          region                = "eastus"
+          publisher_name        = "${{ secrets.AZURE_APIM_PUBLISHER_NAME }}"
+          publisher_email       = "${{ secrets.AZURE_APIM_PUBLISHER_EMAIL }}"
+          backend_service_url   = "${{ secrets.BACKEND_SERVICE_URL }}"
+          EOF
+          elif [ "${{ matrix.cloud }}" = "aws" ]; then
+            cat >> terraform.tfvars << EOF
+          region              = "us-east-1"
+          backend_service_url = "${{ secrets.BACKEND_SERVICE_URL }}"
+          EOF
+          elif [ "${{ matrix.cloud }}" = "gcp" ]; then
+            cat >> terraform.tfvars << EOF
+          project_id          = "${{ secrets.GCP_PROJECT_ID }}"
+          region              = "us-central1"
+          backend_service_url = "${{ secrets.BACKEND_SERVICE_URL }}"
+          gateway_image       = "${{ secrets.GCP_GATEWAY_IMAGE }}"
+          EOF
+          fi
+
+      # Terraform Plan
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -out=tfplan -input=false
+          terraform show -no-color tfplan > plan.txt
+        env:
+          # Azure
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      # Comment PR with plan
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('api-gateway/terraform/${{ matrix.cloud }}/plan.txt', 'utf8');
+            const truncatedPlan = plan.length > 65000 ? plan.substring(0, 65000) + '\n\n... (truncated)' : plan;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan: ${{ matrix.cloud }} (${{ matrix.environment }}) 🔧\n\`\`\`\n${truncatedPlan}\n\`\`\``
+            });
+
+      # Terraform Apply
+      - name: Terraform Apply
+        if: |
+          github.ref == 'refs/heads/main' && 
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.terraform_action == 'apply')
+        run: terraform apply -auto-approve tfplan
+        env:
+          # Azure
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      # Terraform Destroy
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && inputs.terraform_action == 'destroy'
+        run: terraform destroy -auto-approve
+        env:
+          # Azure
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      # Output results
+      - name: Terraform Output
+        if: |
+          github.ref == 'refs/heads/main' && 
+          (github.event_name == 'push' || 
+          (github.event_name == 'workflow_dispatch' && inputs.terraform_action == 'apply'))
+        run: terraform output -json > outputs.json
+
+      - name: Upload outputs
+        if: |
+          github.ref == 'refs/heads/main' && 
+          (github.event_name == 'push' || 
+          (github.event_name == 'workflow_dispatch' && inputs.terraform_action == 'apply'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs-${{ matrix.cloud }}-${{ matrix.environment }}
+          path: api-gateway/terraform/${{ matrix.cloud }}/outputs.json
+          retention-days: 7
+
+  summary:
+    name: Deployment Summary
+    needs: [setup, terraform]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all outputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: terraform-outputs-*
+          path: outputs
+        continue-on-error: true
+
+      - name: Generate Summary
+        run: |
+          echo "## 🌍 Multi-Cloud API Gateway Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Action:** ${{ inputs.terraform_action || 'plan' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Cloud Provider | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          # This would need to be enhanced to show actual status from matrix results
+          echo "| Azure | ${{ needs.terraform.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| AWS | ${{ needs.terraform.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GCP | ${{ needs.terraform.result }} |" >> $GITHUB_STEP_SUMMARY
