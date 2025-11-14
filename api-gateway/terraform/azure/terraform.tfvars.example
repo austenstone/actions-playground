@@ -1,0 +1,31 @@
+# Azure Configuration
+azure_subscription_id = "your-azure-subscription-id"
+region                = "eastus"
+environment           = "dev"
+
+# API Management Configuration
+sku             = "Developer"
+sku_count       = 1
+
+# GitHub Configuration
+# Note: github_org and github_repo are hardcoded to "octodemo/actions-playground"
+# Modify them in main.tf if you need different values
+
+# Backend Service
+backend_service_url = "https://your-private-service.example.com"
+
+# Optional: VNet Integration
+# vnet_name                = "your-vnet-name"
+# subnet_name              = "your-subnet-name"
+# vnet_resource_group_name = "your-vnet-rg"
+
+# Optional: Custom Settings
+# api_path       = "private"
+# oidc_audience  = "api://ActionsOIDCGateway"
+# resource_group_name = "custom-rg-name"
+
+# Optional: Additional Tags
+# tags = {
+#   Project = "GitHub Actions Gateway"
+#   Owner   = "Platform Team"
+# }

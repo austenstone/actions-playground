@@ -1,0 +1,28 @@
+# AWS Configuration
+# Note: If using default AWS credentials (recommended), leave these empty
+# aws_access_key_id     = ""
+# aws_secret_access_key = ""
+region      = "us-east-1"
+environment = "dev"
+
+# GitHub Configuration
+# Note: github_org and github_repo are hardcoded to "octodemo/actions-playground"
+# Modify them in main.tf if you need different values
+
+# Backend Service
+backend_service_url = "https://your-private-service.example.com"
+
+# Optional: VPC Integration for private backend
+# vpc_id            = "vpc-12345678"
+# subnet_ids        = ["subnet-12345678", "subnet-87654321"]
+# security_group_id = "sg-12345678"
+
+# Optional: Custom Settings
+# api_path      = "private"
+# oidc_audience = "api://ActionsOIDCGateway"
+
+# Optional: Additional Tags
+# tags = {
+#   Project = "GitHub Actions Gateway"
+#   Owner   = "Platform Team"
+# }

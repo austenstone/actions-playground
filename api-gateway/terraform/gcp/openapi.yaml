@@ -1,0 +1,47 @@
+swagger: '2.0'
+info:
+  title: GitHub Actions OIDC Gateway
+  description: API Gateway for GitHub Actions to access private resources
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+paths:
+  /${api_path}/{proxy+}:
+    get:
+      summary: Proxy GET requests
+      operationId: proxyGet
+      x-google-backend:
+        address: ${cloud_run_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Successful response
+    post:
+      summary: Proxy POST requests
+      operationId: proxyPost
+      x-google-backend:
+        address: ${cloud_run_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Successful response
+    put:
+      summary: Proxy PUT requests
+      operationId: proxyPut
+      x-google-backend:
+        address: ${cloud_run_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Successful response
+    delete:
+      summary: Proxy DELETE requests
+      operationId: proxyDelete
+      x-google-backend:
+        address: ${cloud_run_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Successful response

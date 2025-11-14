@@ -1,31 +1,29 @@
-# Random string for unique APIM name
-resource "random_string" "apim_name" {
-  length  = 13
-  lower   = true
-  numeric = false
-  special = false
-  upper   = false
+# Common module for shared values
+module "common" {
+  source = "../modules/common"
+  
+  environment         = var.environment
+  region              = var.region
+  cloud_provider      = "azure"
+  backend_service_url = var.backend_service_url
+  oidc_audience       = var.oidc_audience
 }
 
 # Resource Group
 resource "azurerm_resource_group" "apim" {
-  name     = var.resource_group_name != "" ? var.resource_group_name : "rg-apim-${var.environment}-${random_string.apim_name.result}"
-  location = var.location
+  name     = var.resource_group_name != "" ? var.resource_group_name : "rg-apim-${var.environment}-${module.common.random_suffix}"
+  location = module.common.region
   
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Purpose     = "GitHub Actions OIDC Gateway"
-  }
+  tags = module.common.common_tags
 }
 
 # API Management Service
 resource "azurerm_api_management" "gateway" {
-  name                = "apim-${random_string.apim_name.result}"
+  name                = "apim-${module.common.random_suffix}"
   location            = azurerm_resource_group.apim.location
   resource_group_name = azurerm_resource_group.apim.name
-  publisher_name      = var.publisher_name
-  publisher_email     = var.publisher_email
+  publisher_name      = "GitHub Actions"
+  publisher_email     = "noreply@github.com"
 
   sku_name = "${var.sku}_${var.sku_count}"
 
@@ -42,11 +40,7 @@ resource "azurerm_api_management" "gateway" {
     type = "SystemAssigned"
   }
   
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Purpose     = "GitHub Actions OIDC Gateway"
-  }
+  tags = module.common.common_tags
 }
 
 # Data source for existing VNet (if using VNet integration)
@@ -65,7 +59,7 @@ resource "azurerm_api_management_api" "github_actions" {
   revision            = "1"
   display_name        = "GitHub Actions Private Access API"
   description         = "API Gateway for GitHub Actions to access private resources using OIDC authentication"
-  path                = "private"
+  path                = module.common.normalized_api_path
   protocols           = ["https"]
   subscription_required = false
 }
@@ -76,7 +70,7 @@ resource "azurerm_api_management_backend" "private_service" {
   resource_group_name = azurerm_resource_group.apim.name
   api_management_name = azurerm_api_management.gateway.name
   protocol            = "http"
-  url                 = var.backend_service_url
+  url                 = module.common.backend_service_url
   description         = "Private service backend"
 
   tls {
@@ -99,11 +93,11 @@ resource "azurerm_api_management_api_policy" "github_oidc" {
     <validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized. Invalid or missing GitHub OIDC token.">
       <openid-config url="https://token.actions.githubusercontent.com/.well-known/openid-configuration" />
       <audiences>
-        <audience>api://ActionsOIDCGateway</audience>
+        <audience>${module.common.oidc_audience}</audience>
       </audiences>
       <required-claims>
         <claim name="repository" match="all">
-          <value>${var.github_org}/${var.github_repo}</value>
+          <value>${module.common.repository_full_name}</value>
         </claim>
       </required-claims>
     </validate-jwt>

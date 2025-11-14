@@ -1,0 +1,31 @@
+# GCP Configuration
+project_id  = "your-gcp-project-id"
+region      = "us-central1"
+environment = "dev"
+
+# GitHub Configuration
+# Note: github_org and github_repo are hardcoded to "octodemo/actions-playground"
+# Modify them in main.tf if you need different values
+
+# Backend Service
+backend_service_url = "https://your-private-service.example.com"
+
+# Gateway Image (build and push your own or use placeholder)
+gateway_image = "gcr.io/your-project/github-oidc-gateway:latest"
+
+# Optional: API Gateway (vs direct Cloud Run)
+# use_api_gateway = true
+
+# Optional: VPC Integration for private backend
+# vpc_network         = "your-vpc-network"
+# vpc_connector_cidr  = "10.8.0.0/28"
+
+# Optional: Custom Settings
+# api_path      = "private"
+# oidc_audience = "api://ActionsOIDCGateway"
+
+# Optional: Additional Labels
+# tags = {
+#   project = "github-actions-gateway"
+#   owner   = "platform-team"
+# }
