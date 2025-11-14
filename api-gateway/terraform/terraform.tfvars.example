@@ -1,0 +1,21 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+environment      = "dev"
+location         = "eastus"
+publisher_email  = "your-email@example.com"
+publisher_name   = "Your Organization"
+github_org       = "octodemo"
+github_repo      = "actions-playground"
+backend_service_url = "https://your-private-service.internal"
+
+# Optional: Resource group name (auto-generated if not specified)
+# resource_group_name = "rg-apim-gateway-dev"
+
+# Optional: Use v2 SKUs for better performance and features
+# sku = "BasicV2"  # Options: Developer, BasicV2, StandardV2, PremiumV2
+# sku_count = 1    # Must be 1 or 2
+
+# Optional: VNet integration
+# vnet_name                = "your-vnet-name"
+# subnet_name              = "apim-subnet"
+# vnet_resource_group_name = "your-vnet-rg"

@@ -1,6 +1,0 @@
-query($slug: String!) {
-  enterprise(slug: $slug) {
-    slug
-    databaseId
-  }
-}

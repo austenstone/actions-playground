@@ -1,0 +1,21 @@
+# Terraform state files
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfplan
+terraform/tfplan
+terraform/terraform.tfvars
+
+# Bicep build outputs
+*.bicep.json
+
+# Azure CLI cache
+.azure/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
