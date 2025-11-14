@@ -84,6 +84,33 @@ jobs:
             exit 1
           fi
 
+      - name: Test Unauthorized Access (Should Fail)
+        env:
+          APIM_URL: ${{ vars.APIM_GATEWAY_URL }}
+        run: |
+          echo "🔒 Testing API Gateway security..."
+          echo "Attempting to access without OIDC token (should be rejected)..."
+          
+          # Make request WITHOUT authentication token
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Content-Type: application/json" \
+            "$APIM_URL/get")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "📊 HTTP Status: $http_code"
+          echo "📦 Response: $body"
+          
+          # Verify that request was properly rejected
+          if [ "$http_code" -eq 401 ] || [ "$http_code" -eq 403 ]; then
+            echo "✅ Security validated! Request properly rejected without authentication"
+          else
+            echo "❌ SECURITY ISSUE: API Gateway accepted unauthenticated request!"
+            echo "Expected 401 or 403, got $http_code"
+            exit 1
+          fi
+
       - name: Verify OIDC Claims (Optional Debug)
         env:
           OIDC_TOKEN: ${{ steps.get-token.outputs.token }}
