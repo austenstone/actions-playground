@@ -1,0 +1,103 @@
+name: API Gateway Example
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write  # Required for OIDC token
+  contents: read
+
+jobs:
+  access-private-service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Get GitHub OIDC Token
+        id: get-token
+        run: |
+          # Request OIDC token from GitHub with custom audience
+          OIDC_TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            -H "Accept: application/json; api-version=2.0" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://ActionsOIDCGateway" | jq -r '.value')
+          
+          # Mask the token in logs
+          echo "::add-mask::$OIDC_TOKEN"
+          
+          # Set as output for next steps
+          echo "token=$OIDC_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Call API Gateway - GET Example
+        env:
+          OIDC_TOKEN: ${{ steps.get-token.outputs.token }}
+          APIM_URL: ${{ vars.APIM_GATEWAY_URL }}  # Set this in repository variables
+        run: |
+          echo "🚀 Calling API Gateway..."
+          
+          # Make authenticated request to API Gateway (proxies to httpbin.org/get)
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$APIM_URL/get")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "📊 HTTP Status: $http_code"
+          echo "📦 Response: $body"
+          
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ]; then
+            echo "✅ Successfully accessed private service!"
+          else
+            echo "❌ Failed to access private service"
+            exit 1
+          fi
+
+      - name: Call API Gateway - POST Example
+        env:
+          OIDC_TOKEN: ${{ steps.get-token.outputs.token }}
+          APIM_URL: ${{ vars.APIM_GATEWAY_URL }}
+        run: |
+          echo "🚀 Posting data to API Gateway..."
+          
+          # Make POST request with data (proxies to httpbin.org/post)
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"message": "Hello from GitHub Actions!", "workflow": "${{ github.workflow }}", "repo": "${{ github.repository }}"}' \
+            "$APIM_URL/post")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "📊 HTTP Status: $http_code"
+          echo "📦 Response: $body"
+          
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ]; then
+            echo "✅ Successfully posted to private service!"
+          else
+            echo "❌ Failed to post to private service"
+            exit 1
+          fi
+
+      - name: Verify OIDC Claims (Optional Debug)
+        env:
+          OIDC_TOKEN: ${{ steps.get-token.outputs.token }}
+        run: |
+          echo "🔍 Decoding OIDC token claims..."
+          
+          # Decode JWT payload (base64)
+          payload=$(echo "$OIDC_TOKEN" | cut -d'.' -f2)
+          
+          # Add padding if needed
+          padding=$((4 - ${#payload} % 4))
+          if [ $padding -ne 4 ]; then
+            payload="${payload}$(printf '=' %.0s $(seq 1 $padding))"
+          fi
+          
+          # Decode and pretty print
+          echo "$payload" | base64 -d 2>/dev/null | jq '.' || echo "Unable to decode token"

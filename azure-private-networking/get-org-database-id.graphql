@@ -1,6 +1,0 @@
-query($login: String!) {
-  organization(login: $login) {
-    login
-    databaseId
-  }
-}
