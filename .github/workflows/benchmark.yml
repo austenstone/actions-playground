@@ -67,7 +67,7 @@ jobs:
       
       - name: Get system info
         run: |
-          DURATION_MINUTES=$(awk "BEGIN {printf \"%.0f\", (${{ steps.timing.outputs.duration_seconds }} + 59) / 60}")
+          DURATION_MINUTES=$(awk "BEGIN {print int((${{ steps.timing.outputs.duration_seconds }} + 59) / 60)}")
           TOTAL_COST=$(awk "BEGIN {printf \"%.4f\", ${{ matrix.cost }} * $DURATION_MINUTES}")
           echo "## System Information" >> $GITHUB_STEP_SUMMARY
           echo "- **CPU cores:** $(nproc)" >> $GITHUB_STEP_SUMMARY
