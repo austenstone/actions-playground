@@ -2,13 +2,42 @@ name: Dispatch
 on:
   workflow_dispatch:
     inputs:
-      text:
-        description: 'Text to display'
+      string_input:
+        description: 'String input (free-form text)'
         required: true
         default: 'Hello, world!'
+        type: string
+      number_input:
+        description: 'Number input (numeric value)'
+        required: true
+        default: 42
+        type: number
+      boolean_input:
+        description: 'Boolean input (true/false toggle)'
+        required: true
+        default: true
+        type: boolean
+      choice_input:
+        description: 'Choice input (select from predefined options)'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+          - error
+      environment_input:
+        description: 'Environment input (select from repository environments)'
+        required: false
+        type: environment
 jobs:
-  build:
+  test-inputs:
     runs-on: ubuntu-latest
     steps:
-      - name: Print text input
-        run: echo ${{ inputs.text }}
+      - run: echo "String input value → ${{ inputs.string_input }}"
+      - run: echo "Number input value → ${{ inputs.number_input }}"
+      - run: echo "Boolean input value → ${{ inputs.boolean_input }}"
+      - run: echo "Choice input value → ${{ inputs.choice_input }}"
+      - run: echo "Environment input value → ${{ inputs.environment_input }}"
+      
