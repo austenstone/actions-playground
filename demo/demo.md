@@ -122,6 +122,9 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
 
 # Actions Networking
 
+1. Azure VNet injection
+2. API Gateway 
+
 # Actions Performance (cache, parallelisation, right-sizing machines)
 
 # Actions Security Story (SLSA lvl3 via artifact attestation)
