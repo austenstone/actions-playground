@@ -1,0 +1,94 @@
+name: Linux Kernel Build Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  benchmark-build:
+    name: Build on ${{ matrix.runner-size }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          - runner-size: "Standard (2-core)"
+            runs-on: ubuntu-latest
+          - runner-size: "Large (8-core)"
+            runs-on: 8-core
+          - runner-size: "XLarge (64-core)"
+            runs-on: 64-core
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: torvalds/linux
+      
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flex bison build-essential libssl-dev libelf-dev bc
+      
+      - name: Configure kernel (defconfig)
+        run: make defconfig
+      
+      - name: Build kernel with timing
+        id: build
+        run: |
+          echo "build_start=$(date +%s)" >> $GITHUB_OUTPUT
+          time make -j$(nproc) 2>&1 | tee build.log
+          echo "build_end=$(date +%s)" >> $GITHUB_OUTPUT
+      
+      - name: Calculate build time
+        id: timing
+        run: |
+          START_TIME=${{ steps.build.outputs.build_start }}
+          END_TIME=${{ steps.build.outputs.build_end }}
+          DURATION=$((END_TIME - START_TIME))
+          MINUTES=$((DURATION / 60))
+          SECONDS=$((DURATION % 60))
+          echo "duration_seconds=$DURATION" >> $GITHUB_OUTPUT
+          echo "duration_human=${MINUTES}m ${SECONDS}s" >> $GITHUB_OUTPUT
+          echo "### Build completed in ${MINUTES}m ${SECONDS}s on ${{ matrix.runner-size }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Get system info
+        run: |
+          echo "## System Information for ${{ matrix.runner-size }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CPU cores:** $(nproc)" >> $GITHUB_STEP_SUMMARY
+          echo "- **CPU info:** $(lscpu | grep 'Model name' | cut -d':' -f2 | xargs)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Memory:** $(free -h | grep Mem | awk '{print $2}')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build time:** ${{ steps.timing.outputs.duration_human }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmlinux-${{ matrix.runner-size }}
+          path: |
+            vmlinux
+            arch/x86/boot/bzImage
+          retention-days: 7
+      
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log-${{ matrix.runner-size }}
+          path: build.log
+          retention-days: 7
+
+  summary:
+    name: Benchmark Summary
+    runs-on: ubuntu-latest
+    needs: benchmark-build
+    if: always()
+    steps:
+      - name: Create summary report
+        run: |
+          echo "# 🏁 Linux Kernel Build Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build completed across different runner sizes." >> $GITHUB_STEP_SUMMARY
+          echo "Check individual job summaries for detailed timing and system info." >> $GITHUB_STEP_SUMMARY
