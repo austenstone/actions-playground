@@ -17,7 +17,7 @@ jobs:
     steps:
       - run: mkdir -p ~/docker-image-cache
       - id: docker-image-cache
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
             path: ~/docker-image-cache
             key: docker-image-cache-${{ runner.os }}
