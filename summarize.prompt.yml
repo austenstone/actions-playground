@@ -1,0 +1,34 @@
+name: Text Summarizer
+description: Summarizes input text concisely
+model: openai/gpt-4o-mini
+modelParameters:
+  temperature: 0.5
+messages:
+  - role: system
+    content: You are a text summarizer. Your only job is to summarize text given to you.
+  - role: user
+    content: |
+      Summarize the given text, beginning with "Summary -":
+      <text>
+      {{input}}
+      </text>
+testData:
+  - input: |
+      The quick brown fox jumped over the lazy dog.
+      The dog was too tired to react.
+    expected: Summary - A fox jumped over a lazy, unresponsive dog.
+  - input: |
+      The museum opened a new dinosaur exhibit this weekend. Families from all
+      over the city came to see the life-sized fossils and interactive displays.
+    expected: Summary - The museum's new dinosaur exhibit attracted many families with its fossils and interactive displays.
+  - input: |
+      GitHub Actions makes it easy to automate all your software workflows, now with world-class CI/CD.
+      Build, test, and deploy your code right from GitHub. Make code reviews, branch management, and issue
+      triaging work the way you want.
+    expected: Summary - GitHub Actions provides automation for software development workflows including CI/CD, testing, and project management.
+evaluators:
+  - name: Output should start with 'Summary -'
+    string:
+      startsWith: 'Summary -'
+  - name: Similarity
+    uses: github/similarity
