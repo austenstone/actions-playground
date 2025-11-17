@@ -17,11 +17,11 @@ jobs:
     name: Basic Chat Completion
     runs-on: ubuntu-latest
     steps:
-      - name: Call OpenAI GPT-4o model
+      - name: Call OpenAI GPT-5 model
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🤖 Calling GitHub Models API with GPT-4o..."
+          echo "🤖 Calling GitHub Models API with GPT-5..."
           
           response=$(curl -s "https://models.github.ai/inference/chat/completions" \
             -H "Content-Type: application/json" \
@@ -94,7 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🌊 Streaming response from GPT-4o..."
+          echo "🌊 Streaming response from GPT-5..."
           
           curl -N "https://models.github.ai/inference/chat/completions" \
             -H "Content-Type: application/json" \
