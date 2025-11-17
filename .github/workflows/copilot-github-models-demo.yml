@@ -40,6 +40,13 @@ jobs:
               "model": "openai/gpt-5"
             }')
           
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
           echo "$response" | jq -r '.choices[0].message.content'
 
   # Multi-model comparison: Send same prompt to different models
@@ -79,6 +86,13 @@ jobs:
           
           end_time=$(date +%s)
           duration=$((end_time - start_time))
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
           
           echo "⏱️ Response time: ${duration}s"
           echo "📝 Response:"
@@ -161,8 +175,13 @@ jobs:
               ],
               \"model\": \"openai/gpt-5\"
             }")
-          
-          echo "💡 AI Review Suggestions:"
+                    # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+                    echo "💡 AI Review Suggestions:"
           echo "$response" | jq -r '.choices[0].message.content'
 
   # Issue summarization example
@@ -208,8 +227,13 @@ jobs:
               ],
               \"model\": \"openai/gpt-5\"
             }")
-          
-          echo "📋 Project Status:"
+                    # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+                    echo "📋 Project Status:"
           echo "$response" | jq -r '.choices[0].message.content'
 
   # Error handling example
@@ -332,8 +356,14 @@ jobs:
                 \"model\": \"$model\",
                 \"temperature\": $temperature
               }")
-            
-            actual=$(echo "$response" | jq -r '.choices[0].message.content')
+                        # Check if response contains an error
+            if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+              echo "❌ API Error:"
+              echo "$response" | jq -r '.error.message // .error'
+              ((failed++))
+              continue
+            fi
+                        actual=$(echo "$response" | jq -r '.choices[0].message.content')
             
             echo "📝 Input: ${input:0:50}..."
             echo "✅ Expected: $expected"
