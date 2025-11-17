@@ -20,7 +20,7 @@ jobs:
           - runner-size: "Large (4-core)"
             runs-on: 4-core
             cost: 0.016
-          - runner-size: "Large (8-core)"
+          - runner-size: "Medium (8-core)"
             runs-on: 8-core
             cost: 0.032
           - runner-size: "XLarge (16-core)"
