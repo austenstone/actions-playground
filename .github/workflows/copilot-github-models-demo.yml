@@ -115,7 +115,7 @@ jobs:
                   echo -n "$content"
                 fi
               fi
-            done
+            done || true
           
           echo ""
           echo "✅ Streaming complete"
@@ -311,8 +311,8 @@ jobs:
             input=$(yq ".testData[$i].input" summarize.prompt.yml)
             expected=$(yq ".testData[$i].expected" summarize.prompt.yml)
             
-            # Replace {{input}} placeholder in template
-            user_content=$(echo "$user_template" | sed "s|{{input}}|$input|g")
+            # Replace {{input}} placeholder in template using bash string replacement
+            user_content="${user_template//\{\{input\}\}/$input}"
             
             # Call the model
             response=$(curl -s "https://models.github.ai/inference/chat/completions" \
