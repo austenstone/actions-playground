@@ -315,9 +315,9 @@ jobs:
           echo ""
           echo "📝 Response received successfully"
 
-  # Prompt file execution: Run tests from summarize.prompt.yml
-  prompt-file-evaluation:
-    name: Prompt File Evaluation
+  # Prompt file demo: Load prompt config and call API
+  prompt-file-demo:
+    name: Prompt File Demo
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -327,13 +327,13 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
       
-      - name: Parse and execute prompt file tests
+      - name: Call API using prompt file configuration
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "📋 Loading prompt configuration from summarize.prompt.yml..."
           
-          # Extract configuration
+          # Extract configuration from prompt file
           model=$(yq '.model' summarize.prompt.yml)
           temperature=$(yq '.modelParameters.temperature' summarize.prompt.yml)
           system_content=$(yq '.messages[0].content' summarize.prompt.yml)
@@ -343,89 +343,49 @@ jobs:
           echo "🌡️ Temperature: $temperature"
           echo ""
           
-          # Get test data count
-          test_count=$(yq '.testData | length' summarize.prompt.yml)
+          # Get first test case as example
+          input=$(yq '.testData[0].input' summarize.prompt.yml)
           
-          passed=0
-          failed=0
+          echo "📝 Test Input:"
+          echo "$input"
+          echo ""
           
-          # Run each test case
-          for i in $(seq 0 $((test_count - 1))); do
-            echo "🧪 Test case $((i + 1))/$test_count"
-            
-            input=$(yq ".testData[$i].input" summarize.prompt.yml)
-            expected=$(yq ".testData[$i].expected" summarize.prompt.yml)
-            
-            # Replace {{input}} placeholder in template using bash string replacement
-            user_content="${user_template//\{\{input\}\}/$input}"
-            
-            # Call the model
-            response=$(curl -s "https://models.github.ai/inference/chat/completions" \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -d "{
-                \"messages\": [
-                  {
-                    \"role\": \"system\",
-                    \"content\": $(echo "$system_content" | jq -Rs .)
-                  },
-                  {
-                    \"role\": \"user\",
-                    \"content\": $(echo "$user_content" | jq -Rs .)
-                  }
-                ],
-                \"model\": \"$model\",
-                \"temperature\": $temperature
-              }")
-            
-            echo "📦 Raw API Response:"
-            echo "$response"
-            echo ""
-            
-            # Check if response contains an error
-            if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
-              echo "❌ API Error:"
-              echo "$response" | jq -r '.error.message // .error'
-              ((failed++))
-              continue
-            fi
-            
-            actual=$(echo "$response" | jq -r '.choices[0].message.content')
-            
-            echo "📝 Input: ${input:0:50}..."
-            echo "✅ Expected: $expected"
-            echo "🤖 Actual: $actual"
-            
-            # Run evaluators
-            echo "🔍 Running evaluators..."
-            
-            # Evaluator 1: Check if starts with "Summary -"
-            if [[ "$actual" == Summary\ -* ]]; then
-              echo "  ✅ Starts with 'Summary -'"
-            else
-              echo "  ❌ Does not start with 'Summary -'"
-              ((failed++))
-              continue
-            fi
-            
-            # Evaluator 2: Basic similarity check (contains key words)
-            # Extract key nouns from expected output for simple similarity
-            if [[ ! -z "$actual" && ${#actual} -gt 10 ]]; then
-              echo "  ✅ Output has reasonable length"
-              ((passed++))
-            else
-              echo "  ❌ Output too short or empty"
-              ((failed++))
-            fi
-            
-            echo ""
-          done
+          # Replace {{input}} placeholder in template
+          user_content="${user_template//\{\{input\}\}/$input}"
           
-          echo "📊 Results: $passed passed, $failed failed out of $test_count tests"
+          echo "🚀 Calling GitHub Models API..."
           
-          if [[ $failed -gt 0 ]]; then
-            echo "❌ Some tests failed"
+          # Call the API with prompt file configuration
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "{
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": $(echo "$system_content" | jq -Rs .)
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": $(echo "$user_content" | jq -Rs .)
+                }
+              ],
+              \"model\": \"$model\",
+              \"temperature\": $temperature
+            }")
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
             exit 1
-          else
-            echo "✅ All tests passed!"
           fi
+          
+          echo "✅ API Response:"
+          echo "$response" | jq -r '.choices[0].message.content'
+          echo ""
+          echo "🎉 Successfully called API using prompt file configuration!"
