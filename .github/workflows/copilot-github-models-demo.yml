@@ -37,7 +37,7 @@ jobs:
                   "content": "What is the capital of France?"
                 }
               ],
-              "model": "openai/gpt-4o"
+              "model": "openai/gpt-5"
             }')
           
           echo "$response" | jq -r '.choices[0].message.content'
@@ -49,12 +49,12 @@ jobs:
     strategy:
       matrix:
         model:
-          - name: "GPT-4o"
-            id: "openai/gpt-4o"
-          - name: "Llama 3.3 70B"
-            id: "meta-llama/Llama-3.3-70B-Instruct"
-          - name: "Mistral 7B"
-            id: "mistralai/Mistral-7B-Instruct-v0.3"
+          - name: "GPT-5"
+            id: "openai/gpt-5"
+          - name: "Grok 3"
+            id: "xai/grok-3"
+          - name: "DeepSeek V3"
+            id: "deepseek/DeepSeek-V3-0324"
     steps:
       - name: Compare responses from ${{ matrix.model.name }}
         env:
@@ -106,7 +106,7 @@ jobs:
                   "content": "Write a haiku about GitHub Actions."
                 }
               ],
-              "model": "openai/gpt-4o",
+              "model": "openai/gpt-5",
               "stream": true
             }' | while IFS= read -r line; do
               if [[ "$line" == data:* ]]; then
@@ -159,7 +159,7 @@ jobs:
                   \"content\": \"These files were changed in a PR: ${changed_files}. What should reviewers pay attention to?\"
                 }
               ],
-              \"model\": \"openai/gpt-4o\"
+              \"model\": \"openai/gpt-5\"
             }")
           
           echo "💡 AI Review Suggestions:"
@@ -206,7 +206,7 @@ jobs:
                   \"content\": \"Issues: ${issue_titles}\"
                 }
               ],
-              \"model\": \"openai/gpt-4o\"
+              \"model\": \"openai/gpt-5\"
             }")
           
           echo "📋 Project Status:"
@@ -262,7 +262,7 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -d '{
               "messages": [{"role": "user", "content": "Hi"}],
-              "model": "openai/gpt-4o"
+              "model": "openai/gpt-5"
             }')
           
           echo "ℹ️ GitHub Models provides free access with rate limits."
