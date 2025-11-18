@@ -3,8 +3,11 @@ on:
 
 jobs:
   lint:
+    runs-on: ubuntu-latest
     steps: &setup_steps
       - uses: actions/checkout@v4
+        with:
+          repository: austenstone/action-typescript
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
