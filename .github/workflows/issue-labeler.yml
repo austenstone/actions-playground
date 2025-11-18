@@ -68,6 +68,9 @@ jobs:
         id: ai_labels
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+          ISSUE_BODY: ${{ steps.issue.outputs.body }}
+          AVAILABLE_LABELS: ${{ steps.labels.outputs.labels }}
         run: |
           echo "🤖 Analyzing issue with AI..."
           
@@ -76,38 +79,39 @@ jobs:
           temperature=$(yq '.modelParameters.temperature' issue-labeler.prompt.yml)
           max_tokens=$(yq '.modelParameters.maxTokens' issue-labeler.prompt.yml)
           system_content=$(yq '.messages[0].content' issue-labeler.prompt.yml)
-          user_template=$(yq '.messages[1].content' issue-labeler.prompt.yml)
-          
-          # Prepare the user prompt with actual values
-          title=$(echo '${{ steps.issue.outputs.title }}' | jq -Rs .)
-          body=$(echo '${{ steps.issue.outputs.body }}' | jq -Rs .)
-          labels=$(echo '${{ steps.labels.outputs.labels }}' | jq -Rs .)
-          
-          user_content=$(echo "$user_template" | sed "s|{{title}}|${{ steps.issue.outputs.title }}|g")
-          user_content=$(echo "$user_content" | sed "s|{{body}}|${{ steps.issue.outputs.body }}|g")
-          user_content=$(echo "$user_content" | sed "s|{{available_labels}}|${{ steps.labels.outputs.labels }}|g")
           
           echo "📤 Calling $model..."
           
-          # Call GitHub Models API
-          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -d "{
-              \"messages\": [
+          # Build JSON payload using jq for proper escaping
+          payload=$(jq -n \
+            --arg system "$system_content" \
+            --arg title "$ISSUE_TITLE" \
+            --arg body "$ISSUE_BODY" \
+            --arg labels "$AVAILABLE_LABELS" \
+            --arg model "$model" \
+            --argjson temperature "$temperature" \
+            --argjson max_tokens "$max_tokens" \
+            '{
+              messages: [
                 {
-                  \"role\": \"system\",
-                  \"content\": $(echo "$system_content" | jq -Rs .)
+                  role: "system",
+                  content: $system
                 },
                 {
-                  \"role\": \"user\",
-                  \"content\": $(echo "$user_content" | jq -Rs .)
+                  role: "user",
+                  content: "Analyze this GitHub issue and suggest appropriate labels:\n\n**Issue Title:**\n\($title)\n\n**Issue Body:**\n\($body)\n\n**Available Labels:**\n\($labels)\n\nOutput only the comma-separated label names:"
                 }
               ],
-              \"model\": \"$model\",
-              \"temperature\": $temperature,
-              \"max_tokens\": $max_tokens
-            }")
+              model: $model,
+              temperature: $temperature,
+              max_tokens: $max_tokens
+            }')
+          
+          # Call GitHub Models API
+          response=$(echo "$payload" | curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d @-)
           
           # Check for errors
           if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
