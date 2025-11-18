@@ -1,16 +1,17 @@
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
   # Job 1: Defines the anchor
   lint-frontend:
-    defaults: &frontend_defaults # ⚓️ Anchor defined here
+    defaults:
       run:
         working-directory: ./apps/frontend
         shell: bash
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: &checkout_withs # ⚓️ Anchor defined here
+        with:
           repository: austenstone/action-typescript
       - run: npm ci
       - run: npm run lint
