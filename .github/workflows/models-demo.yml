@@ -1,0 +1,391 @@
+name: Copilot GitHub Models Demo
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/copilot-github-models-demo.yml'
+      - 'summarize.prompt.yml'
+
+permissions:
+  contents: read
+  models: read  # Required to call GitHub Models API
+
+jobs:
+  # Basic example: Simple API call to a single model
+  basic-chat-completion:
+    name: Basic Chat Completion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call OpenAI GPT-5 model
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🤖 Calling GitHub Models API with GPT-5..."
+          
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d '{
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+                },
+                {
+                  "role": "user",
+                  "content": "What is the capital of France?"
+                }
+              ],
+              "model": "openai/gpt-5"
+            }')
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          echo "📝 Parsed Response:"
+          echo "$response" | jq -r '.choices[0].message.content'
+
+  # Multi-model comparison: Send same prompt to different models
+  multi-model-comparison:
+    name: Multi-Model Comparison
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        model:
+          - name: "GPT-5"
+            id: "openai/gpt-5"
+          - name: "Grok 3"
+            id: "xai/grok-3"
+          - name: "DeepSeek V3"
+            id: "deepseek/DeepSeek-V3-0324"
+    steps:
+      - name: Compare responses from ${{ matrix.model.name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔄 Testing ${{ matrix.model.name }}..."
+          
+          start_time=$(date +%s)
+          
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d '{
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Explain the concept of recursion in one sentence."
+                }
+              ],
+              "model": "${{ matrix.model.id }}"
+            }')
+          
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          echo "⏱️ Response time: ${duration}s"
+          echo "📝 Parsed Response:"
+          echo "$response" | jq -r '.choices[0].message.content'
+          echo ""
+
+  # Streaming response example
+  streaming-response:
+    name: Streaming Chat Completion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stream response from model
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🌊 Streaming response from GPT-5..."
+          
+          curl -N "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d '{
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "Write a haiku about GitHub Actions."
+                }
+              ],
+              "model": "openai/gpt-5",
+              "stream": true
+            }' | while IFS= read -r line; do
+              if [[ "$line" == data:* ]]; then
+                content=$(echo "${line#data: }" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
+                if [[ -n "$content" && "$content" != "null" ]]; then
+                  echo -n "$content"
+                fi
+              fi
+            done || true
+          
+          echo ""
+          echo "✅ Streaming complete"
+
+  # Practical CI/CD use case: Code review assistance
+  code-review-assistant:
+    name: Code Review Assistant
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get changed files
+        id: changed-files
+        run: |
+          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > changed_files.txt
+          echo "Files changed:"
+          cat changed_files.txt
+      
+      - name: Analyze changes with AI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          changed_files=$(cat changed_files.txt | head -5 | paste -sd "," -)
+          
+          echo "🔍 Analyzing changes with GitHub Models..."
+          
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "{
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": \"You are a code review assistant. Provide brief, constructive feedback.\"
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": \"These files were changed in a PR: ${changed_files}. What should reviewers pay attention to?\"
+                }
+              ],
+              \"model\": \"openai/gpt-5\"
+            }")
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          echo "💡 AI Review Suggestions:"
+          echo "$response" | jq -r '.choices[0].message.content'
+
+  # Issue summarization example
+  issue-summarizer:
+    name: Issue Summarizer
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Summarize recent issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📊 Fetching recent issues..."
+          
+          # Get recent issues using GitHub API
+          issues=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues?state=open&per_page=3")
+          
+          issue_titles=$(echo "$issues" | jq -r '.[].title' | paste -sd "; " -)
+          
+          if [[ -z "$issue_titles" || "$issue_titles" == "" ]]; then
+            echo "No open issues found."
+            exit 0
+          fi
+          
+          echo "🤖 Generating summary with AI..."
+          
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "{
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": \"You are a project manager. Summarize these issue titles into a brief project status update.\"
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": \"Issues: ${issue_titles}\"
+                }
+              ],
+              \"model\": \"openai/gpt-5\"
+            }")
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          echo "📋 Project Status:"
+          echo "$response" | jq -r '.choices[0].message.content'
+
+  # Error handling example
+  error-handling:
+    name: Error Handling Demo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Handle API errors gracefully
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🛡️ Demonstrating error handling..."
+          
+          # Try with an invalid model
+          response=$(curl -s -w "\n%{http_code}" "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d '{
+              "messages": [{"role": "user", "content": "Hello"}],
+              "model": "invalid/model-name"
+            }')
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          if [[ "$http_code" -ne 200 ]]; then
+            echo "❌ Error (HTTP $http_code):"
+            echo "$body" | jq -r '.message // .error.message // "Unknown error"'
+            echo ""
+            echo "💡 Tip: Check available models at https://github.com/marketplace/models"
+          else
+            echo "✅ Success"
+            echo "$body" | jq -r '.choices[0].message.content'
+          fi
+
+  # Rate limiting awareness
+  rate-limit-check:
+    name: Check Rate Limits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display rate limit information
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📊 Checking GitHub Models rate limits..."
+          
+          # Make a simple call and check headers
+          response=$(curl -s -i "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d '{
+              "messages": [{"role": "user", "content": "Hi"}],
+              "model": "openai/gpt-5"
+            }')
+          
+          echo "ℹ️ GitHub Models provides free access with rate limits."
+          echo "ℹ️ Enable billing for higher limits at https://github.com/settings/billing"
+          echo ""
+          echo "📝 Response received successfully"
+
+  # Prompt file demo: Load prompt config and call API
+  prompt-file-demo:
+    name: Prompt File Demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install yq for YAML parsing
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+      
+      - name: Call API using prompt file configuration
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📋 Loading prompt configuration from summarize.prompt.yml..."
+          
+          # Extract configuration from prompt file
+          model=$(yq '.model' summarize.prompt.yml)
+          temperature=$(yq '.modelParameters.temperature' summarize.prompt.yml)
+          system_content=$(yq '.messages[0].content' summarize.prompt.yml)
+          user_template=$(yq '.messages[1].content' summarize.prompt.yml)
+          
+          echo "🤖 Model: $model"
+          echo "🌡️ Temperature: $temperature"
+          echo ""
+          
+          # Get first test case as example
+          input=$(yq '.testData[0].input' summarize.prompt.yml)
+          
+          echo "📝 Test Input:"
+          echo "$input"
+          echo ""
+          
+          # Replace {{input}} placeholder in template
+          user_content="${user_template//\{\{input\}\}/$input}"
+          
+          echo "🚀 Calling GitHub Models API..."
+          
+          # Call the API with prompt file configuration
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "{
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": $(echo "$system_content" | jq -Rs .)
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": $(echo "$user_content" | jq -Rs .)
+                }
+              ],
+              \"model\": \"$model\",
+              \"temperature\": $temperature
+            }")
+          
+          echo "📦 Raw API Response:"
+          echo "$response"
+          echo ""
+          
+          # Check if response contains an error
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          echo "✅ API Response:"
+          echo "$response" | jq -r '.choices[0].message.content'
+          echo ""
+          echo "🎉 Successfully called API using prompt file configuration!"

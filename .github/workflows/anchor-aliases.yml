@@ -1,13 +1,9 @@
+
 on:
   workflow_dispatch:
 
 jobs:
-  # Job 1: Defines the anchor
   lint-frontend:
-    defaults:
-      run:
-        working-directory: ./apps/frontend
-        shell: bash
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
