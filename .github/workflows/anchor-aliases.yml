@@ -1,20 +1,24 @@
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps: &setup_steps
-      - uses: actions/checkout@v4
-        with:
-          repository: austenstone/action-typescript
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-
-  test:
+  # Job 1: Defines the anchor
+  lint-frontend:
+    defaults: &frontend_defaults # ⚓️ Anchor defined here
+      run:
+        working-directory: ./apps/frontend
+        shell: bash
     runs-on: ubuntu-latest
     steps:
-      - *setup_steps      # Injects checkout, setup-node, and npm ci
-      - run: npm test     # syntax error! You cannot mix a list alias with other items.
+      - uses: actions/checkout@v4
+        with: &checkout_withs # ⚓️ Anchor defined here
+          repository: austenstone/action-typescript
+      - run: npm ci
+      - run: npm run lint
+
+  # Job 2: Reuses the anchor completely
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults: *frontend_defaults # 🔗 Injects working-directory and shell
+    steps:
+      - uses: actions/checkout@v4
+        with: *checkout_with
