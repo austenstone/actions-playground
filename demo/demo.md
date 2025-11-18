@@ -67,6 +67,11 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
 3. Define inputs, outputs, and main entrypoint for your action.
 4. Test your action locally and in a workflow.
 
+## Reusability
+1. Use reusable workflows to share common logic and reduce duplication.
+   1. Use the `workflow_call` event to call workflows from other workflows.
+2. Use composite actions to combine multiple steps into a single reusable action.
+
 ## Architecture
 1. `pull_request` should trigger PR tests
 2. `push` should trigger deployments
