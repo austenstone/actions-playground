@@ -1,0 +1,176 @@
+name: AI Issue Labeler
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to label'
+        required: false
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  label-issue:
+    name: Auto-label Issue with AI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get issue details
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            issue_number="${{ inputs.issue_number }}"
+          else
+            issue_number="${{ github.event.issue.number }}"
+          fi
+          
+          echo "🔍 Fetching issue #${issue_number}..."
+          
+          issue_data=$(gh issue view "$issue_number" --json title,body)
+          
+          title=$(echo "$issue_data" | jq -r '.title')
+          body=$(echo "$issue_data" | jq -r '.body // "No description provided"')
+          
+          echo "title=${title}" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "issue_number=${issue_number}" >> $GITHUB_OUTPUT
+
+      - name: Get available labels
+        id: labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🏷️ Fetching repository labels..."
+          
+          labels=$(gh label list --json name --jq 'map(.name) | join(", ")')
+          
+          echo "Available labels: $labels"
+          echo "labels=${labels}" >> $GITHUB_OUTPUT
+
+      - name: Install yq for YAML parsing
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Call GitHub Models API for label suggestions
+        id: ai_labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🤖 Analyzing issue with AI..."
+          
+          # Extract configuration from prompt file
+          model=$(yq '.model' issue-labeler.prompt.yml)
+          temperature=$(yq '.modelParameters.temperature' issue-labeler.prompt.yml)
+          max_tokens=$(yq '.modelParameters.maxTokens' issue-labeler.prompt.yml)
+          system_content=$(yq '.messages[0].content' issue-labeler.prompt.yml)
+          user_template=$(yq '.messages[1].content' issue-labeler.prompt.yml)
+          
+          # Prepare the user prompt with actual values
+          title=$(echo '${{ steps.issue.outputs.title }}' | jq -Rs .)
+          body=$(echo '${{ steps.issue.outputs.body }}' | jq -Rs .)
+          labels=$(echo '${{ steps.labels.outputs.labels }}' | jq -Rs .)
+          
+          user_content=$(echo "$user_template" | sed "s|{{title}}|${{ steps.issue.outputs.title }}|g")
+          user_content=$(echo "$user_content" | sed "s|{{body}}|${{ steps.issue.outputs.body }}|g")
+          user_content=$(echo "$user_content" | sed "s|{{available_labels}}|${{ steps.labels.outputs.labels }}|g")
+          
+          echo "📤 Calling $model..."
+          
+          # Call GitHub Models API
+          response=$(curl -s "https://models.github.ai/inference/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "{
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": $(echo "$system_content" | jq -Rs .)
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": $(echo "$user_content" | jq -Rs .)
+                }
+              ],
+              \"model\": \"$model\",
+              \"temperature\": $temperature,
+              \"max_tokens\": $max_tokens
+            }")
+          
+          # Check for errors
+          if echo "$response" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Error:"
+            echo "$response" | jq -r '.error.message // .error'
+            exit 1
+          fi
+          
+          # Extract suggested labels
+          suggested_labels=$(echo "$response" | jq -r '.choices[0].message.content' | tr -d '\n' | tr -d ' ')
+          
+          echo "🏷️ AI suggested labels: $suggested_labels"
+          echo "labels=$suggested_labels" >> $GITHUB_OUTPUT
+
+      - name: Apply labels to issue
+        if: steps.ai_labels.outputs.labels != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          suggested_labels="${{ steps.ai_labels.outputs.labels }}"
+          issue_number="${{ steps.issue.outputs.issue_number }}"
+          
+          if [[ "$suggested_labels" == "none" || -z "$suggested_labels" ]]; then
+            echo "ℹ️ No labels suggested by AI"
+            exit 0
+          fi
+          
+          echo "✨ Applying labels: $suggested_labels"
+          
+          # Convert comma-separated list to array for gh CLI
+          IFS=',' read -ra label_array <<< "$suggested_labels"
+          
+          # Apply each label
+          for label in "${label_array[@]}"; do
+            label=$(echo "$label" | xargs)  # trim whitespace
+            echo "Adding label: $label"
+            gh issue edit "$issue_number" --add-label "$label" || echo "⚠️ Failed to add label: $label"
+          done
+          
+          echo "✅ Labels applied successfully!"
+
+      - name: Comment on issue
+        if: steps.ai_labels.outputs.labels != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issue_number="${{ steps.issue.outputs.issue_number }}"
+          suggested_labels="${{ steps.ai_labels.outputs.labels }}"
+          
+          if [[ "$suggested_labels" == "none" || -z "$suggested_labels" ]]; then
+            exit 0
+          fi
+          
+          cat << 'EOF' > comment.md
+          🤖 **AI Auto-Labeler**
+          
+          I've analyzed this issue and applied the following labels: `LABELS_PLACEHOLDER`
+          
+          These labels were suggested by **OpenAI GPT-4.1-mini** based on the issue title and description.
+          
+          > 💡 If you think the labels are incorrect, feel free to update them manually!
+          EOF
+          
+          sed -i "s/LABELS_PLACEHOLDER/$suggested_labels/g" comment.md
+          
+          gh issue comment "$issue_number" --body-file comment.md
