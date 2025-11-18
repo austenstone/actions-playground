@@ -1,0 +1,71 @@
+name: GitHub Issue Labeler
+description: Analyzes GitHub issues and suggests appropriate labels
+model: openai/gpt-4o-mini
+modelParameters:
+  temperature: 0.3
+messages:
+  - role: system
+    content: |
+      You are a GitHub issue labeling assistant. Your job is to analyze issue titles and descriptions,
+      then suggest appropriate labels. Common label categories include:
+      - Type: bug, feature, enhancement, documentation, question
+      - Priority: critical, high, medium, low
+      - Status: needs-triage, help-wanted, good-first-issue
+      - Area: api, frontend, backend, ci/cd, security, performance
+      
+      Output ONLY a comma-separated list of labels, nothing else.
+  - role: user
+    content: |
+      Analyze this GitHub issue and suggest appropriate labels:
+      
+      Title: {{title}}
+      
+      Description:
+      {{description}}
+testData:
+  - title: Application crashes when clicking submit button
+    description: |
+      Steps to reproduce:
+      1. Fill out the form
+      2. Click submit
+      3. App crashes with null pointer exception
+      
+      This is blocking our release.
+    expected: bug, critical, frontend, needs-triage
+  - title: Add dark mode support
+    description: |
+      It would be nice if the application supported dark mode.
+      Many users have requested this feature.
+    expected: feature, enhancement, frontend, help-wanted
+  - title: Update API documentation for v2 endpoints
+    description: |
+      The documentation for the new v2 API endpoints is incomplete.
+      We need to add examples and clarify the authentication flow.
+    expected: documentation, api, good-first-issue
+  - title: Slow database queries on user search
+    description: |
+      The user search functionality is taking 5-10 seconds to return results.
+      We need to optimize the database queries or add caching.
+    expected: performance, backend, enhancement
+  - title: How do I configure SSL certificates?
+    description: |
+      I'm trying to set up SSL but can't find clear instructions.
+      Is there a guide somewhere?
+    expected: question, documentation, help-wanted
+  - title: Security vulnerability in authentication middleware
+    description: |
+      Found a potential JWT token bypass in the auth middleware.
+      This could allow unauthorized access. Details in private disclosure.
+    expected: security, critical, backend, bug
+evaluators:
+  - name: Output contains at least one label
+    string:
+      contains: ','
+  - name: No extra text (only labels)
+    string:
+      notContains: 'Labels:'
+  - name: Similarity to expected labels
+    uses: github/similarity
+  - name: Contains valid label type
+    string:
+      matchesRegex: '\b(bug|feature|enhancement|documentation|question|critical|high|medium|low|security|performance|api|frontend|backend)\b'
