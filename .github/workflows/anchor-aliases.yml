@@ -1,0 +1,17 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    steps: &setup_steps
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - *setup_steps      # Injects checkout, setup-node, and npm ci
+      - run: npm test     # syntax error! You cannot mix a list alias with other items.
