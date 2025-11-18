@@ -73,6 +73,8 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
 
 # Actions + Copilot Demo (45 minutes)
 
+How can we use Copilot in GitHub Actions? It can help us write workflows, actions, and fix issues. It can also be directly executed within the Actions environment.
+
 ## Write a workflow
 
 1. Demonstrate how Copilot can assist in writing GitHub Actions workflows.
@@ -92,6 +94,83 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
    1. If copilot stops urge it to commit the change itself, and monitor the progress.
    2. Copilot can call `workflow_dispatch` to rerun the workflow on it's own.
    3. Review the changes and verify the workflow passes.
+
+## Use GitHub Models
+
+1. Explain what GitHub Models is
+2. Show off the prompt builder in the repo
+
+### Generate a custom agent that builds prompt files (optional)
+
+This is off topic but can demonstrate a full copilot workflow.
+
+1. Switch to plan mode
+```md
+We will create a custom agent in .github/agents/github-models.agent.md
+
+The agents goal will be to create prompt files like #file:label-issues.prompt.yml and #file:summarize.prompt.yml 
+
+Read about Evaluators: https://docs.github.com/en/github-models/use-github-models/evaluating-ai-models
+
+Read about prompt structure: https://docs.github.com/en/github-models/use-github-models/storing-prompts-in-github-repositories
+
+More:
+- https://docs.github.com/en/github-models/use-github-models/optimizing-your-ai-powered-app-with-github-models#testing-prompt-variations-with-a-specific-model
+```
+2. Continue
+```md
+Good!
+Read about how to create good custom agents
+- https://code.visualstudio.com/docs/copilot/customization/custom-agents
+- https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents
+```
+3. Continue
+```md
+1. No need to restrict tooling
+2. Sure. If it makes sense.
+3. Keep the prompt reasonably sized if possible.
+4. You can fetch the models with curl:
+curl -L \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer <YOUR-TOKEN>" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://models.github.ai/catalog/models
+
+or
+gh models list
+after installing
+gh extension install github/gh-models
+```
+4. Start implementation
+
+### Generate a prompt file using the custom agent
+1. Switch to the newly created custom agent
+```md
+Create a prompt for a GitHub Issue labeler.
+Input: GitHub Issue and Available Labels
+Output: Label(s)
+
+When a github actions workflow runs it will trigger this model with the context from the trigger event.
+```
+2. Optionally go ahead and test it `gh models eval <file>.prompt.yml`
+```
+ok go ahead and test it
+```
+3. Create workflow
+```
+Help me create the github actions workflow now
+```
+4. Debug the workflow file
+```
+awe no it failed
+https://github.com/octodemo/actions-playground/actions/runs/19458124105/job/55675963464
+Please fix.
+```
+5. Test functionality by opening an issue and having it labeled. Ask copilot for a test issue.
+
+## Copilot cli
+1. Show off copilot cli functionality in GitHub Actions
+2. https://github.com/austenstone/copilot-cli
 
 # Actions Migration (w/ Copilot) from Jenkins, GitLab, Buildkite, CircleCI (45 minutes)
 
