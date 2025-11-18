@@ -12,7 +12,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
-  # Job 2: Reuses the anchor completely
   test-frontend:
     runs-on: ubuntu-latest
     # defaults: *frontend_defaults # 🔗 Injects working-directory and shell
