@@ -1,0 +1,103 @@
+name: GitHub Issue Labeler
+description: Analyzes GitHub issues and suggests appropriate labels based on title, body, and available labels
+model: openai/gpt-4.1-mini
+modelParameters:
+  temperature: 0.3
+  maxTokens: 512
+messages:
+  - role: system
+    content: >
+      You are a GitHub issue labeling assistant. Your job is to analyze issue
+      titles and descriptions, then suggest appropriate labels from the provided list.
+      
+      Rules:
+      - Only suggest labels that exist in the available labels list
+      - Output ONLY a comma-separated list of label names, nothing else
+      - No explanations, no markdown, no extra text
+      - If no labels are appropriate, output "none"
+      - Prioritize accuracy over quantity - suggest 1-4 relevant labels
+      - Consider the issue type (bug, feature, question), priority, and affected components
+  - role: user
+    content: |
+      Analyze this GitHub issue and suggest appropriate labels:
+
+      **Issue Title:**
+      {{title}}
+
+      **Issue Body:**
+      {{body}}
+
+      **Available Labels:**
+      {{available_labels}}
+
+      Output only the comma-separated label names:
+testData:
+  - title: Application crashes when clicking submit button
+    body: |
+      Steps to reproduce:
+      1. Fill out the registration form
+      2. Click the submit button
+      3. App crashes with NullPointerException
+      
+      Expected: Form should submit successfully
+      Actual: Application crashes
+      
+      Stack trace:
+      ```
+      java.lang.NullPointerException
+        at com.example.FormHandler.submit(FormHandler.java:42)
+      ```
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: bug, critical, frontend, needs-triage
+  - title: Add dark mode support
+    body: |
+      It would be nice if the application supported dark mode. Many users prefer
+      dark themes, especially when working at night. This would improve user experience.
+      
+      Suggested implementation:
+      - Add theme toggle in settings
+      - Use CSS variables for colors
+      - Save preference to localStorage
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: enhancement, frontend, help-wanted
+  - title: How do I configure the database connection?
+    body: |
+      I'm trying to set up the application but I'm not sure how to configure
+      the database connection. The README doesn't have clear instructions.
+      
+      Is there an environment variable I need to set? What format should it be in?
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: question, documentation, backend
+  - title: Memory leak in background worker process
+    body: |
+      The background worker process gradually consumes more and more memory over time.
+      After running for 24 hours, it uses 8GB+ of RAM and eventually crashes.
+      
+      This is affecting production servers and causing service interruptions.
+      
+      Metrics show memory growing at ~300MB/hour.
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: bug, critical, backend
+  - title: Update copyright year in footer
+    body: |
+      The footer still says "Copyright 2023" but we're now in 2024.
+      This is a simple one-line change in footer.html.
+      
+      Would be a good first contribution for someone new to the project!
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: frontend, good-first-issue
+  - title: API returns 500 error for valid requests
+    body: |
+      When calling GET /api/users with valid authentication, the API returns 500 Internal Server Error.
+      
+      This started happening after the latest deployment. Rolling back to the previous version fixes it.
+      
+      Error in logs: "Database connection timeout"
+    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
+    expected: bug, critical, backend, needs-triage
+evaluators:
+  - name: Contains comma or none
+    string:
+      contains: ','
+  - name: Similarity to expected labels
+    uses: github/similarity
