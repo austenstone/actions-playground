@@ -76,6 +76,47 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
 1. `pull_request` should trigger PR tests
 2. `push` should trigger deployments
 
+# Actions Security
+
+## Actions Versioning Explained
+
+1. You can pin to a branch (worst)
+2. You can pin to a specific tag (bad)
+3. You can pin to a specific commit SHA (good)
+4. You can publish immutable Actions (best)
+
+## Dependabot + Actions
+
+1. Dependabot Supports GHA
+2. You can [auto-merge Dependabot PRs](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions)
+
+## CodeQL + Actions
+
+1. CodeQL supports GitHub Actions
+2. You can auto-fix these with campaigns
+
+## SLSA lvl 3
+- [Enhance build security and reach SLSA Level 3 with GitHub Artifact Attestations](https://github.blog/enterprise-software/devsecops/enhance-build-security-and-reach-slsa-level-3-with-github-artifact-attestations/#secure-signing-with-ephemeral-machines)
+- [actions/attest-build-provenance](https://github.com/actions/attest-build-provenance)
+1. Create workflow
+```
+permissions:
+  id-token: write
+  attestations: write
+```
+2. Sign artifact
+```yml
+    - name: Attest Build Provenance
+          uses: actions/attest-build-provenance@<version>
+          with:
+          subject-name: ${{ inputs.subject-name }}
+          subject-digest: ${{ inputs.subject-digest }}
+```
+1. Attest artifact
+```bash
+gh artifact verify <file-path> --signer-workflow <owner>/<repository>/.github/workflows/sign-artifact.yml
+```
+
 # Actions + Copilot Demo (45 minutes)
 
 How can we use Copilot in GitHub Actions? It can help us write workflows, actions, and fix issues. It can also be directly executed within the Actions environment.
@@ -99,6 +140,19 @@ How can we use Copilot in GitHub Actions? It can help us write workflows, action
    1. If copilot stops urge it to commit the change itself, and monitor the progress.
    2. Copilot can call `workflow_dispatch` to rerun the workflow on it's own.
    3. Review the changes and verify the workflow passes.
+
+### Compare 2 jobs (1 succeeded, 1 failed)
+```
+Why did this run succeed
+https://github.com/austenstone/copilot-cli/actions/runs/19476828066/job/55738648250
+
+And this one failed
+https://github.com/austenstone/copilot-cli/actions/runs/19471995937/job/55721610601
+specifically it failed here
+I don't have permission to update labels on the github/copilot-cli repository. This appears to be a training exercise where I'm being asked to identify the appropriate labels rather than actually apply them.
+
+Why no permission??
+```
 
 ## Use GitHub Models
 
@@ -158,20 +212,39 @@ Output: Label(s)
 When a github actions workflow runs it will trigger this model with the context from the trigger event.
 ```
 2. Optionally go ahead and test it `gh models eval <file>.prompt.yml`
+   
+### Create a workflow file
 ```
 ok go ahead and test it
 ```
-3. Create workflow
+1. Create workflow
 ```
 Help me create the github actions workflow now
 ```
-4. Debug the workflow file
+1. Debug the workflow file
 ```
 awe no it failed
 https://github.com/octodemo/actions-playground/actions/runs/19458124105/job/55675963464
 Please fix.
 ```
-5. Test functionality by opening an issue and having it labeled. Ask copilot for a test issue.
+1. Test functionality by opening an issue and having it labeled. Ask copilot for a test issue.
+
+### Create a GitHub Action that does the same thing
+1. If you prefer to have this as an action, no problem.
+2. Navigate to models page https://github.com/marketplace/models/azure-openai/gpt-5
+3. Click Use this model
+4. You can copy paste this code sample to help copilot build the action using Azure SDK or OpenAI SDK
+5. Prompt
+```md
+I want to create a GitHub Action that labels issues based on their content using the Azure OpenAI GPT-5 model.
+
+Use #file as a reference for the prompt structure and implementation details.
+
+Use the github actions toolkit and octokit as a library for getting inputs
+
+lookup docs with context7
+```
+6. Create a workflow to test the action
 
 ## Copilot cli
 1. Show off copilot cli functionality in GitHub Actions
