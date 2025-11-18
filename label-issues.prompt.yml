@@ -1,25 +1,32 @@
 name: GitHub Issue Labeler
 description: Analyzes GitHub issues and suggests appropriate labels
-model: openai/gpt-4o-mini
+model: openai/gpt-5
 modelParameters:
   temperature: 0.3
 messages:
   - role: system
-    content: |
-      You are a GitHub issue labeling assistant. Your job is to analyze issue titles and descriptions,
+    content: >
+      You are a GitHub issue labeling assistant. Your job is to analyze issue
+      titles and descriptions,
+
       then suggest appropriate labels. Common label categories include:
+
       - Type: bug, feature, enhancement, documentation, question
+
       - Priority: critical, high, medium, low
+
       - Status: needs-triage, help-wanted, good-first-issue
+
       - Area: api, frontend, backend, ci/cd, security, performance
-      
+
+
       Output ONLY a comma-separated list of labels, nothing else.
   - role: user
     content: |
       Analyze this GitHub issue and suggest appropriate labels:
-      
+
       Title: {{title}}
-      
+
       Description:
       {{description}}
 testData:
@@ -29,7 +36,7 @@ testData:
       1. Fill out the form
       2. Click submit
       3. App crashes with null pointer exception
-      
+
       This is blocking our release.
     expected: bug, critical, frontend, needs-triage
   - title: Add dark mode support
@@ -58,14 +65,36 @@ testData:
       This could allow unauthorized access. Details in private disclosure.
     expected: security, critical, backend, bug
 evaluators:
-  - name: Output contains at least one label
+  - name: Contains Comma
     string:
       contains: ','
-  - name: No extra text (only labels)
+  - name: Starts With Comma
     string:
-      notContains: 'Labels:'
-  - name: Similarity to expected labels
+      startsWith: ','
+  - name: Ends With Comma
+    string:
+      endsWith: ','
+  - name: Does it make sense
+    llm:
+      model: gpt-4.1
+      modelId: azureml://registries/azure-openai/models/gpt-4.1/versions/2025-04-14
+      prompt: 'Does {{expected}} match {{completion}} '
+      choices:
+        - choice: 'yes'
+          score: 1
+        - choice: 'no'
+          score: 0
+      modelParameters:
+        temperature: 0.15
+      systemPrompt: You are an issue labeler
+  - name: Similarity
     uses: github/similarity
-  - name: Contains valid label type
-    string:
-      matchesRegex: '\b(bug|feature|enhancement|documentation|question|critical|high|medium|low|security|performance|api|frontend|backend)\b'
+  - name: Coherence
+    uses: github/coherence
+  - name: Fluency
+    uses: github/fluency
+  - name: Relevance
+    uses: github/relevance
+  - name: Groundedness
+    uses: github/groundedness
+responseFormat: text
