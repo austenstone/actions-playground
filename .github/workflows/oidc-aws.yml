@@ -22,7 +22,7 @@ jobs:
       - name: Git clone the repository
         uses: actions/checkout@v5
       - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        uses: aws-actions/configure-aws-credentials@f2964c7281262753f549b15ae39f1cbbb033b9e4
         with:
           role-to-assume: arn:aws:iam::624991055395:role/GitHubActionsOIDCRole
           role-session-name: GitHubActions-${{ github.event.repository.name }}-${{ github.run_id }}
