@@ -140,6 +140,13 @@ Docs:
 
 How can we use Copilot in GitHub Actions? It can help us write workflows, actions, and fix issues. It can also be directly executed within the Actions environment.
 
+## Custom Instructions / Agents / Prompts
+
+1. Explain how to create custom instructions for Copilot.
+2. [github-actions.instructions.md](../.github/instructions/github-actions.instructions.md)
+3. [copilot-instructions.md](../.github/copilot-instructions.md)
+4. Create custom agent to debug workflow failures
+
 ## Write a workflow
 
 1. Demonstrate how Copilot can assist in writing GitHub Actions workflows.
