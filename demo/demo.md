@@ -38,11 +38,14 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
    1. For example, test on Node.js 18, 20, 22 and ubuntu, windows.
 4. Use caching to speed up your builds.
    1. [NPM Cache example](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#example-using-the-cache-action)
+   2. Discuss when NOT to cache (e.g. Pull Requests to avoid cache poisoning or thrashing).
 5. Create an artifact
    1. Use [actions/upload-artifact](https://github.com/marketplace/actions/upload-a-build-artifact) to save build output.
 6. Use parallel jobs to speed up your workflow.
    1. Now that the build is output as an artifact, you can quickly download it in another job.
    2. Use `needs:` to control the execution order.
+   3. Shard tests across multiple jobs (e.g. by folder or test type).
+   4. Create speed-levels for tests (Smoke tests fast, Full suite slow).
 8. Use secrets to manage sensitive information securely.
    3. This is a good time to show off the `gh` cli. Start by creating a failing API call.
    1. Create a secret `TOKEN` with a GitHub PAT.
@@ -71,6 +74,7 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
 1. Use reusable workflows to share common logic and reduce duplication.
    1. Use the `workflow_call` event to call workflows from other workflows.
 2. Use composite actions to combine multiple steps into a single reusable action.
+3. Required Workflows (via Rulesets) to enforce compliance across repositories.
 
 ## Architecture
 1. `pull_request` should trigger PR tests
@@ -140,6 +144,8 @@ How can we use Copilot in GitHub Actions? It can help us write workflows, action
    1. If copilot stops urge it to commit the change itself, and monitor the progress.
    2. Copilot can call `workflow_dispatch` to rerun the workflow on it's own.
    3. Review the changes and verify the workflow passes.
+5. Use Workflow commands to enrich error messages for the Agent to pick up and fix.
+   1. `::error file=app.js,line=1::Missing semicolon`
 
 ### Compare 2 jobs (1 succeeded, 1 failed)
 ```
@@ -264,6 +270,29 @@ lookup docs with context7
    3. Tell copilot to migrate the pipeline
    4. Review and test the migrated pipeline using copilot
 
+## Jenkins Pipeline Example Migration
+1. [jenkinsci/pipeline-examples](https://github.com/jenkinsci/pipeline-examples)
+2. Create plan in plan mode
+```md
+I need to migrate these Jenkins examples into GitHub Actions examples.
+
+Here are some documents on migrating:
+- https://docs.github.com/en/actions/tutorials/migrate-to-github-actions/manual-migrations/migrate-from-jenkins
+- https://www.stepsecurity.io/blog/jenkins-to-github-actions-step-by-step-guide
+- https://docs.github.com/en/actions/tutorials/migrate-to-github-actions/automated-migrations/jenkins-migration
+- https://medium.com/@yarindeoh/a-journey-for-migrating-jenkins-to-github-actions-4fc635f541d4
+```
+```md
+1. Actually we need to run these examples. Put them in .github/workflows please
+2. Use real secrets and I will create them
+3. You can test the workflows yourself using gh cli
+```
+```md
+Follow instructions in [plan-migration.prompt.md](file:///c%3A/Users/auste/source/pipeline-examples/.github/prompts/plan-migration.prompt.md).
+use #github-actions tools to test functionality as you build it. You will need to use the push or workflow_dispatch event to trigger the workflow to run. Be patient and the workflow will finish. Use the workflow logs to determine how to proceed.
+Keep migrating. Don't stop. Take your time.
+```
+
 # Actions Runners + Custom Base Images (30 minutes)
 
 1. Discuss the benefits of using GitHub-hosted runners versus self-hosted runners.
@@ -275,6 +304,7 @@ lookup docs with context7
    5. Runner Groups
    6. Networking (Static IPs)
 3. Discuss custom base images and their use cases
+   1. Share prep-workflow to install dependencies on the Runner for both actions and copilot agent to speed things up.
 4. Demonstrate how to create and use custom base images in self-hosted runners
 
 # Actions Networking
