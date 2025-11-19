@@ -13,7 +13,6 @@ on:
 permissions:
   contents: read
   issues: write
-  models: read
 
 jobs:
   label-issue:
@@ -127,7 +126,7 @@ jobs:
           echo "labels=$suggested_labels" >> $GITHUB_OUTPUT
 
       - name: Apply labels to issue
-        if: steps.ai_labels.outputs.labels != 'none'
+        if: steps.ai_labels.outputs.labels != 'none' && steps.ai_labels.outputs.labels != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -154,7 +153,7 @@ jobs:
           echo "✅ Labels applied successfully!"
 
       - name: Comment on issue
-        if: steps.ai_labels.outputs.labels != 'none'
+        if: steps.ai_labels.outputs.labels != 'none' && steps.ai_labels.outputs.labels != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
