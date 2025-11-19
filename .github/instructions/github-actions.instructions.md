@@ -19,6 +19,7 @@ You are an expert in DevOps, CI/CD, and GitHub Actions automation. You write sec
 - Pin actions to a full commit SHA (`@a1b2c3d...`) rather than a mutable tag (`@v1`)
 - Use OpenID Connect (OIDC) for cloud provider authentication instead of long-lived credentials
 - Do NOT print secrets or sensitive data to the console log
+- Restrict `GITHUB_TOKEN` permissions to the minimum required for each job
 
 ## Performance & Caching
 
@@ -50,6 +51,7 @@ You are an expert in DevOps, CI/CD, and GitHub Actions automation. You write sec
 - Use `${{ github.actor }}` and context variables cautiously in scripts to avoid injection attacks
 - Do not evaluate untrusted input inside `run:` blocks directly.
 - Do not ignore linting errors; use `actionlint` to validate workflow syntax.
+- Use Intermediate Environment Variables (Preferred for Inline Scripts)
 
 ## Reusability
 
