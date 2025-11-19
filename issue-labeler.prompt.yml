@@ -1,103 +1,93 @@
-name: GitHub Issue Labeler
+name: GitHub Issue Auto-Labeler
 description: Analyzes GitHub issues and suggests appropriate labels based on title, body, and available labels
 model: openai/gpt-4.1-mini
 modelParameters:
   temperature: 0.3
-  maxTokens: 512
+  maxTokens: 256
 messages:
   - role: system
     content: >
-      You are a GitHub issue labeling assistant. Your job is to analyze issue
-      titles and descriptions, then suggest appropriate labels from the provided list.
+      You are a GitHub issue classification assistant. Your task is to analyze issue content and suggest appropriate labels from a provided list.
       
-      Rules:
-      - Only suggest labels that exist in the available labels list
-      - Output ONLY a comma-separated list of label names, nothing else
-      - No explanations, no markdown, no extra text
+      Rules and Constraints:
+      - ONLY suggest labels from the provided "Available Labels" list
+      - Output ONLY comma-separated label names, nothing else (no explanations, no markdown, no extra text)
+      - If multiple labels apply, list them all separated by commas
       - If no labels are appropriate, output "none"
-      - Prioritize accuracy over quantity - suggest 1-4 relevant labels
-      - Consider the issue type (bug, feature, question), priority, and affected components
+      - Be conservative - only suggest labels that clearly match the issue content
+      - Common label patterns to recognize:
+        * "bug" - Something isn't working, errors, crashes, unexpected behavior
+        * "enhancement" - Feature requests, improvements, new functionality
+        * "documentation" - Documentation updates, clarifications, examples
+        * "question" - Seeking help, clarification, or information
+        * "duplicate" - Issue already exists
+        * "good first issue" - Beginner-friendly tasks
+        * "help wanted" - Needs community assistance
+        * "wontfix" - Will not be addressed
+        * Priority labels (high, medium, low, critical)
+        * Area labels (frontend, backend, api, testing, etc.)
+      
+      Capabilities:
+      - Analyze issue title for keywords and intent
+      - Parse issue body for technical details and context
+      - Identify bug reports from error messages or stack traces
+      - Recognize feature requests from language like "it would be nice" or "can we add"
+      - Detect questions from uncertainty language or question marks
+      - Match issue content to semantic meaning of available labels
   - role: user
     content: |
       Analyze this GitHub issue and suggest appropriate labels:
-
+      
       **Issue Title:**
-      {{title}}
-
+      {{issue_title}}
+      
       **Issue Body:**
-      {{body}}
-
+      {{issue_body}}
+      
       **Available Labels:**
       {{available_labels}}
-
+      
       Output only the comma-separated label names:
 testData:
-  - title: Application crashes when clicking submit button
-    body: |
-      Steps to reproduce:
-      1. Fill out the registration form
-      2. Click the submit button
-      3. App crashes with NullPointerException
-      
-      Expected: Form should submit successfully
-      Actual: Application crashes
-      
-      Stack trace:
-      ```
-      java.lang.NullPointerException
-        at com.example.FormHandler.submit(FormHandler.java:42)
-      ```
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: bug, critical, frontend, needs-triage
-  - title: Add dark mode support
-    body: |
-      It would be nice if the application supported dark mode. Many users prefer
-      dark themes, especially when working at night. This would improve user experience.
-      
-      Suggested implementation:
-      - Add theme toggle in settings
-      - Use CSS variables for colors
-      - Save preference to localStorage
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: enhancement, frontend, help-wanted
-  - title: How do I configure the database connection?
-    body: |
-      I'm trying to set up the application but I'm not sure how to configure
-      the database connection. The README doesn't have clear instructions.
-      
-      Is there an environment variable I need to set? What format should it be in?
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: question, documentation, backend
-  - title: Memory leak in background worker process
-    body: |
-      The background worker process gradually consumes more and more memory over time.
-      After running for 24 hours, it uses 8GB+ of RAM and eventually crashes.
-      
-      This is affecting production servers and causing service interruptions.
-      
-      Metrics show memory growing at ~300MB/hour.
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: bug, critical, backend
-  - title: Update copyright year in footer
-    body: |
-      The footer still says "Copyright 2023" but we're now in 2024.
-      This is a simple one-line change in footer.html.
-      
-      Would be a good first contribution for someone new to the project!
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: frontend, good-first-issue
-  - title: API returns 500 error for valid requests
-    body: |
-      When calling GET /api/users with valid authentication, the API returns 500 Internal Server Error.
-      
-      This started happening after the latest deployment. Rolling back to the previous version fixes it.
-      
-      Error in logs: "Database connection timeout"
-    available_labels: bug, critical, enhancement, frontend, backend, documentation, help-wanted, good-first-issue, needs-triage, question, wontfix
-    expected: bug, critical, backend, needs-triage
+  - issue_title: "Application crashes when clicking submit button"
+    issue_body: "When I click the submit button on the contact form, the entire application crashes. Console shows 'TypeError: Cannot read property of undefined'. This happens consistently on Chrome 120."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "bug, frontend, high"
+  
+  - issue_title: "Add dark mode support"
+    issue_body: "It would be great to have a dark mode option for users who prefer it. Many modern applications support this and it reduces eye strain during night usage."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "enhancement, frontend"
+  
+  - issue_title: "How do I configure the API endpoint?"
+    issue_body: "I'm trying to set up this project but I can't find documentation on how to configure the API endpoint. Can someone point me in the right direction?"
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "question, documentation"
+  
+  - issue_title: "Update installation guide with new prerequisites"
+    issue_body: "The installation guide is missing information about Node.js version 18+ being required. We should update the docs to reflect this change."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "documentation, good first issue"
+  
+  - issue_title: "Refactor user authentication module"
+    issue_body: "The current authentication code is difficult to maintain. We should refactor it to use the new JWT library and improve error handling."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "enhancement, backend"
+  
+  - issue_title: "Server returns 500 error on production deployment"
+    issue_body: "After deploying to production, the server immediately returns 500 errors for all requests. Logs show database connection timeout. This is blocking all users from accessing the application."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "bug, backend, critical"
+  
+  - issue_title: "Improve README with usage examples"
+    issue_body: "The README could benefit from more practical examples showing how to use the main features. New users often struggle to get started."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "documentation, enhancement, good first issue"
+  
+  - issue_title: "Random issue about cats"
+    issue_body: "I love cats. They are fluffy."
+    available_labels: "bug, enhancement, documentation, question, duplicate, good first issue, help wanted, frontend, backend, critical, high, medium, low"
+    expected: "none"
 evaluators:
-  - name: Contains comma or none
-    string:
-      contains: ','
-  - name: Similarity to expected labels
+  - name: Label accuracy
     uses: github/similarity
