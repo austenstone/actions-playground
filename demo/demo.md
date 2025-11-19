@@ -120,6 +120,19 @@ permissions:
 ```bash
 gh artifact verify <file-path> --signer-workflow <owner>/<repository>/.github/workflows/sign-artifact.yml
 ```
+4. Prompt
+```md
+Add artifact attestations to this workflow.
+
+Docs:
+- https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
+- https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/increase-security-rating
+- https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/enforce-artifact-attestations
+- https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/verify-attestations-offline
+- https://github.blog/enterprise-software/devsecops/enhance-build-security-and-reach-slsa-level-3-with-github-artifact-attestations/#secure-signing-with-ephemeral-machines
+- https://github.com/actions/attest-build-provenance
+- https://cli.github.com/manual/gh_attestation_verify
+```
 
 # Actions + Copilot Demo (45 minutes)
 
