@@ -28,29 +28,29 @@ Understanding the core concepts and components of GitHub Actions.
 
 ## Power up
 Explore advanced features like matrix builds, artifacts, caching, parallel jobs, environments, secrets.
-
-### Matrix
-1. Define a matrix strategy in your workflow `build.yml`
-2. Use [actions/setup-node](https://github.com/marketplace/actions/setup-node-js-environment)
+1. Explain context `${{ toJson(github) }}`
+2. Define a matrix strategy in your workflow `build.yml`
+3. Use [actions/setup-node](https://github.com/marketplace/actions/setup-node-js-environment)
    1. Describe that many setup actions exist for python, ruby, java, etc.
    2. Specify node version and cache npm.
-3. Use the matrix to run tests across multiple versions of your runtime or dependencies.
+4. Use the matrix to run tests across multiple versions of your runtime or dependencies.
    1. For example, test on Node.js 18, 20, 22 and ubuntu, windows.
-4. Use caching to speed up your builds.
+5. Use caching to speed up your builds.
    1. [NPM Cache example](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#example-using-the-cache-action)
    2. Discuss when NOT to cache (e.g. Pull Requests to avoid cache poisoning or thrashing).
-5. Create an artifact
+6. Create an artifact
    1. Use [actions/upload-artifact](https://github.com/marketplace/actions/upload-a-build-artifact) to save build output.
-6. Use parallel jobs to speed up your workflow.
+7. Use parallel jobs to speed up your workflow.
    1. Now that the build is output as an artifact, you can quickly download it in another job.
    2. Use `needs:` to control the execution order.
    3. Shard tests across multiple jobs (e.g. by folder or test type).
    4. Create speed-levels for tests (Smoke tests fast, Full suite slow).
-8. Use secrets to manage sensitive information securely.
-   3. This is a good time to show off the `gh` cli. Start by creating a failing API call.
-   1. Create a secret `TOKEN` with a GitHub PAT.
-   2. Use the secret in your workflow to authenticate an API request.
-9. Use environment secrets and protection rules
+8. Concurrency to avoid race conditions and extra cost.
+9. Use secrets to manage sensitive information securely.
+   1. This is a good time to show off the `gh` cli. Start by creating a failing API call.
+   2. Create a secret `TOKEN` with a GitHub PAT.
+   3. Use the secret in your workflow to authenticate an API request.
+10. Use environment secrets and protection rules
     1. Create an environment
     2. Add secrets to the environment
        1. You can use your GitHub PAT
@@ -60,9 +60,11 @@ Explore advanced features like matrix builds, artifacts, caching, parallel jobs,
     6. Deploy your application using the environment
     7. Show that the environment is protected and requires approval
     8. Show that the deployment appears on the deployments page.
-10. Discuss security
+11. Discuss security
     1.  Mention workflow/job permissions (least privilege)
     2.  Discuss actions versioning
+    3.  OIDC
+12. containers and services
 
 ## Create your own Actions
 1. Understand the types of actions: JavaScript, Docker container, and composite actions.
