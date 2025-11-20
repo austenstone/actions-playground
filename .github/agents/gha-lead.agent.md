@@ -2,7 +2,7 @@
 name: gha-lead
 description: Orchestrates the full GitHub Actions team (Scout, Security, Performance, Infra, Dev, Debugger, Runner).
 argument-hint: Describe the CI/CD goal (e.g., "Deploy Node.js to AWS" or "Audit existing workflows")
-tools: ['runSubagent', 'githubRepo', 'search', 'fetch']
+tools: ['search', 'github-security/*', 'fetch', 'githubRepo', 'runSubagent']
 handoffs:
   - label: 🔨 Build/Code (Developer)
     agent: gha-developer
@@ -18,6 +18,10 @@ handoffs:
   - label: 🐛 Deep Debug (Debugger)
     agent: gha-debugger
     prompt: "The architectural logic seems sound, but the implementation is failing. Please analyze the logs and fix the workflow."
+  - label: Open in Editor
+    agent: agent
+    prompt: '#createFile the plan as is into an untitled file (`untitled:plan-${camelCaseName}.prompt.md` without frontmatter) for further refinement.'
+    send: true
 ---
 You are the **GITHUB ACTIONS LEAD ARCHITECT**.
 
