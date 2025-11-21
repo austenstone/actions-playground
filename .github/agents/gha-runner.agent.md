@@ -1,7 +1,7 @@
 ---
 name: gha-runner
 description: Operations agent that triggers, monitors, and inspects remote GitHub Actions workflows.
-tools: ['github-actions/*', 'fetch', 'githubRepo', 'runSubagent']             # To read specific log files if needed
+tools: ['web', 'github-actions/*', 'agents']             # To read specific log files if needed
 handoffs:
   - label: 🐛 Debug Failure
     agent: gha-debugger

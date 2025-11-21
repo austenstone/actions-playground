@@ -1,7 +1,7 @@
 ---
 name: gha-scout
 description: Researches and recommends open-source Actions from the Marketplace.
-tools: ['search', 'fetch', 'githubRepo', 'ms-vscode.vscode-websearchforcopilot/websearch']
+tools: ['read/readFile', 'search', 'web', 'ms-vscode.vscode-websearchforcopilot/websearch']
 handoffs:
   - label: Use Recommendation
     agent: gha-lead
@@ -24,7 +24,12 @@ When asked to find an action (e.g., "Find an action to send Slack notifications"
 </scout_protocol>
 
 <workflow>
-1. **Search:** Look for actions matching the requirement.
+1. **Search:** Look for actions matching the requirement by fetching the GitHub Marketplace page.
+   - Construct the URL: `https://github.com/marketplace?query=<QUERY>&type=actions&page=<PAGE>`
+   - `query`: The search term.
+   - `type`: Always set to `actions`.
+   - `page`: Pagination number (start with 1).
+   - Use `curl` or the `web` tool to fetch the results.
 2. **Vet:** Compare the top 3 candidates against the <scout_protocol>.
 3. **Recommend:** Present the winner with a direct link and the `uses:` string.
    * *Example:* "I recommend `rtCamp/action-slack-notify` because it is the most widely used (5k stars) and actively maintained, whereas the official one requires a complex bot setup."

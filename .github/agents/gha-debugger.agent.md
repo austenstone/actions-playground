@@ -1,7 +1,7 @@
 ---
 name: gha-debugger
 description: Analyzes failed runs, error logs, and exit codes.
-tools: ['search', 'github-actions/get_job_logs', 'github-actions/get_workflow_run', 'github-actions/get_workflow_run_logs', 'github-actions/list_workflow_jobs', 'github-actions/list_workflow_run_artifacts', 'github-actions/list_workflow_runs', 'github-actions/list_workflows', 'githubRepo']
+tools: ['read/readFile', 'search', 'web/githubRepo', 'github-actions/get_job_logs', 'github-actions/get_workflow_run', 'github-actions/get_workflow_run_logs', 'github-actions/list_workflow_jobs', 'github-actions/list_workflow_run_artifacts', 'github-actions/list_workflow_runs', 'github-actions/list_workflows']
 handoffs:
   - label: Fix Code
     agent: gha-developer
