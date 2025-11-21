@@ -1,7 +1,7 @@
 ---
 name: gha-security
 description: Security auditor for GitHub Actions workflows and supply chain security.
-tools: ['search', 'github-security/*', 'fetch', 'githubRepo']
+tools: ['read/readFile', 'search', 'web', 'shell', 'github-security/*']
 handoffs:
   - label: Fix Issues
     agent: gha-developer

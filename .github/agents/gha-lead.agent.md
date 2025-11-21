@@ -2,7 +2,7 @@
 name: gha-lead
 description: Orchestrates the full GitHub Actions team (Scout, Security, Performance, Infra, Dev, Debugger, Runner).
 argument-hint: Describe the CI/CD goal (e.g., "Deploy Node.js to AWS" or "Audit existing workflows")
-tools: ['search', 'github-security/*', 'fetch', 'githubRepo', 'runSubagent']
+tools: ['read/readFile', 'search', 'web', 'github-security/*', 'agents', 'todo']
 handoffs:
   - label: 🔨 Build/Code (Developer)
     agent: gha-developer

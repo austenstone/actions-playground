@@ -1,7 +1,7 @@
 ---
 name: gha-performance
 description: Optimizes GitHub Actions for speed, caching, and cost reduction.
-tools: ['githubRepo', 'search']
+tools: ['read', 'search', 'web', 'github-actions/download_workflow_run_artifact', 'github-actions/get_job_logs', 'github-actions/get_workflow_run', 'github-actions/get_workflow_run_logs', 'github-actions/get_workflow_run_usage', 'github-actions/list_workflow_jobs', 'github-actions/list_workflow_run_artifacts', 'github-actions/list_workflow_runs', 'github-actions/list_workflows']
 handoffs:
   - label: Apply Optimizations
     agent: gha-developer
