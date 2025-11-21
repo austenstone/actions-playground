@@ -50,11 +50,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
-# Security: Restrict permissions by default
 permissions:
   contents: read
 
-# Optimization: Cancel previous runs on the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -63,7 +61,7 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Safety: Prevent hung jobs
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       ...
