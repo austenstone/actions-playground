@@ -10,6 +10,10 @@ on:
 env:
   NODE_VERSION: 20
 
+# Set minimal permissions for GITHUB_TOKEN at workflow level
+permissions:
+  contents: read
+
 jobs:
   # Initial setup and dependency installation
   setup:
