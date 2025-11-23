@@ -49,15 +49,10 @@ OWNER="austenstone"
 REPO="actions-playground"
 TOKEN="YOUR_TOKEN"
 
-# Create TEST_DB_USER secret
-echo -n "testuser" | gh secret set TEST_DB_USER
-
-# Or using curl:
-curl -X PUT \
-  -H "Authorization: token $TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/$OWNER/$REPO/actions/secrets/TEST_DB_USER \
-  -d '{"encrypted_value":"...","key_id":"..."}'
+# Or using the same --body flag format for consistency
+# Using GitHub API requires encrypting values with the repository's public key
+# See: https://docs.github.com/en/rest/actions/secrets#create-or-update-a-repository-secret
+# We recommend using GitHub CLI (gh) instead for easier secret management
 ```
 
 ## Security Benefits
