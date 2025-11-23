@@ -1,0 +1,242 @@
+# ============================================================================
+# VITEST TEST SHARDING DEMO
+# ============================================================================
+# This workflow demonstrates Vitest's test sharding capability for parallel
+# test execution across multiple GitHub Actions runners.
+#
+# 🎯 Key Concepts Demonstrated:
+# - Test sharding: Splitting test files across 4 parallel runners
+# - Blob reporter: Collecting test results for later merging
+# - Report merging: Combining results from all shards into final report
+# - Coverage merging: Aggregating coverage data from all shards
+#
+# 📊 Performance Benefits:
+# - Instead of running all tests sequentially on one runner
+# - We split tests across 4 runners that execute in parallel
+# - This typically reduces total execution time by 50-75%
+#
+# 🔗 References:
+# - Vitest Sharding: https://vitest.dev/guide/improving-performance#sharding
+# - Inspired by: https://github.com/vitest-tests/test-sharding
+# ============================================================================
+
+name: Vitest Sharding Demo
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'demo-app/**'
+      - '.github/workflows/vitest-sharding-demo.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'demo-app/**'
+      - '.github/workflows/vitest-sharding-demo.yml'
+  workflow_dispatch:
+    inputs:
+      shard-count:
+        description: 'Number of shards to use (1-8)'
+        required: false
+        default: '4'
+        type: choice
+        options:
+          - '2'
+          - '4'
+          - '6'
+          - '8'
+
+# 🛡️ Security: Least privilege permissions
+permissions:
+  contents: read
+  checks: write
+
+# 🚀 Cancel outdated runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  SHARD_COUNT: ${{ inputs.shard-count || '4' }}
+
+jobs:
+  # ==========================================================================
+  # JOB 1: TEST SHARDS (Matrix Strategy)
+  # ==========================================================================
+  # Purpose: Run tests in parallel across multiple shards
+  # Strategy: Use GitHub Actions matrix to spawn 4 parallel jobs
+  # Output: Blob reports stored as artifacts (.vitest-reports directory)
+  # ==========================================================================
+  test-shards:
+    name: 'Test Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    strategy:
+      fail-fast: false  # Continue even if one shard fails
+      matrix:
+        # 🎯 Matrix Configuration: Creates 4 parallel jobs
+        # Each job gets a unique shardIndex (1, 2, 3, 4)
+        # Vitest will automatically split test files across shards
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+      
+      - name: 📦 Install dependencies
+        working-directory: demo-app
+        run: npm ci
+      
+      - name: 🧪 Run tests with sharding
+        working-directory: demo-app
+        run: |
+          echo "::group::🎯 Running Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}"
+          npm run test:shard -- --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --coverage
+          echo "::endgroup::"
+        env:
+          # These ensure consistent test execution
+          CI: true
+          NODE_ENV: test
+      
+      # 📊 Critical Step: Upload blob reports with coverage
+      # The blob reporter creates binary reports that can be merged later
+      # Note: .vitest-reports is a hidden directory but is still captured
+      - name: 📤 Upload blob report
+        if: ${{ !cancelled() }}  # Upload even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shardIndex }}
+          path: demo-app/.vitest-reports/
+          retention-days: 1  # Short retention since only needed for this workflow
+          if-no-files-found: error
+      
+      - name: 📋 Shard summary
+        if: always()
+        run: |
+          echo "## 🧪 Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shard Index | ${{ matrix.shardIndex }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Shards | ${{ matrix.shardTotal }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 2: MERGE REPORTS
+  # ==========================================================================
+  # Purpose: Combine all shard results into final test report
+  # Dependencies: Runs after ALL shards complete (even if some fail)
+  # Output: Unified test report with merged coverage
+  # ==========================================================================
+  merge-reports:
+    name: 📊 Merge Test Reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    # Run even if some shards failed (to see partial results)
+    if: ${{ !cancelled() }}
+    needs: [test-shards]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+      
+      - name: 📦 Install dependencies
+        working-directory: demo-app
+        run: npm ci
+      
+      # 📥 Download all blob reports from artifacts
+      # The merge-multiple flag combines all matching artifacts into one directory
+      - name: 📥 Download blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: demo-app/.vitest-reports
+          pattern: blob-report-*
+          merge-multiple: true
+      
+      # 🔍 Debug: Show what we downloaded
+      - name: 🔍 Verify downloaded reports
+        working-directory: demo-app
+        run: |
+          echo "::group::📁 Contents of .vitest-reports"
+          ls -laR .vitest-reports/
+          echo "::endgroup::"
+      
+      # 🔀 Merge all blob reports into final report
+      # This combines test results AND coverage data
+      - name: 🔀 Merge test reports
+        working-directory: demo-app
+        run: |
+          echo "::group::🔀 Merging reports from all shards"
+          npm run test:merge -- --reporter=default --reporter=json --reporter=html --coverage
+          echo "::endgroup::"
+      
+      # 📤 Upload merged coverage report
+      - name: 📤 Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: demo-app/coverage/
+          retention-days: 7
+          if-no-files-found: warn
+      
+      # 📊 Generate comprehensive summary
+      - name: 📊 Generate workflow summary
+        if: always()
+        working-directory: demo-app
+        run: |
+          echo "# 🎯 Vitest Sharding Demo Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Shards Used | ${{ env.SHARD_COUNT }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node Version | ${{ env.NODE_VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Runner OS | ubuntu-latest |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## ✅ Workflow Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Shards | ${{ needs.test-shards.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Report Merge | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "## 📈 Coverage Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            COVERAGE=$(jq -r '.total.lines.pct' coverage/coverage-summary.json 2>/dev/null || echo "N/A")
+            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | ${COVERAGE}% |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎓 Key Takeaways" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Tests were split across ${{ env.SHARD_COUNT }} parallel runners" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Each runner only executed a subset of test files" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Results were merged into a single comprehensive report" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Coverage data was aggregated from all shards" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📚 **Learn more:** [Vitest Sharding Docs](https://vitest.dev/guide/improving-performance#sharding)" >> $GITHUB_STEP_SUMMARY
