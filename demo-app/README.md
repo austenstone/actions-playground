@@ -1,13 +1,14 @@
 # GitHub Actions SDLC Demo Application
 
-This is a minimal Node.js application designed to demonstrate a complete Software Development Lifecycle (SDLC) pipeline using GitHub Actions.
+This is a minimal Node.js application designed to demonstrate a complete Software Development Lifecycle (SDLC) pipeline using GitHub Actions, now featuring **Vitest with test sharding** for parallel test execution.
 
 ## 🎯 Purpose
 
 This demo showcases modern CI/CD practices including:
 
 - **Build Automation** - Automated compilation and bundling
-- **Multi-Version Testing** - Unit tests across Node.js 18.x, 20.x, 22.x
+- **Test Sharding** - Parallel test execution across multiple runners 🆕
+- **Multi-Version Testing** - Unit tests across Node.js versions
 - **Integration Testing** - Real database tests with PostgreSQL and Redis
 - **Code Quality** - ESLint for linting and code style
 - **Security Scanning** - Trivy vulnerability detection
@@ -35,7 +36,7 @@ npm run build
 ### Run Tests
 
 ```bash
-# All tests
+# All tests with coverage (Vitest)
 npm test
 
 # Unit tests only
@@ -43,6 +44,12 @@ npm run test:unit
 
 # Integration tests only
 npm run test:integration
+
+# Run with test sharding (for CI/CD)
+npm run test:shard -- --shard=1/4
+
+# Merge blob reports (after sharding)
+npm run test:merge
 ```
 
 ### Lint
@@ -63,21 +70,68 @@ npm start
 demo-app/
 ├── src/                    # Source code
 │   ├── index.js           # Main application entry
-│   ├── math.js            # Example utility module
+│   ├── math.js            # Math utilities
+│   ├── string.js          # String utilities
+│   ├── array.js           # Array utilities
+│   ├── validation.js      # Validation functions
+│   ├── date.js            # Date utilities
+│   ├── object.js          # Object utilities
+│   ├── number.js          # Number utilities
 │   └── database.js        # Database connection utilities
 ├── tests/                 # Test suites
 │   ├── unit/              # Unit tests (fast, isolated)
+│   │   ├── math.test.js
+│   │   ├── string.test.js
+│   │   ├── array.test.js
+│   │   ├── validation.test.js
+│   │   ├── date.test.js
+│   │   ├── object.test.js
+│   │   └── number.test.js
 │   └── integration/       # Integration tests (with services)
+│       └── api.test.js
 ├── dist/                  # Build output (generated)
 ├── coverage/              # Test coverage reports (generated)
+├── .vitest-reports/       # Blob reports for sharding (generated)
 ├── package.json           # npm dependencies and scripts
 ├── .eslintrc.json         # ESLint configuration
-└── jest.config.js         # Jest test configuration
+└── vitest.config.js       # Vitest test configuration
 ```
 
 ## 🔄 CI/CD Workflow
 
-The `.github/workflows/sdlc-demo.yml` workflow demonstrates:
+### Test Sharding Workflow (`vitest-sharding-demo.yml`) 🆕
+
+Demonstrates parallel test execution using Vitest's native sharding capability:
+
+```
+Test Shard 1/4  ┐
+Test Shard 2/4  ├─► Run in parallel
+Test Shard 3/4  │   (Each shard gets ~25% of test files)
+Test Shard 4/4  ┘
+     │
+     └─► Merge Reports Job
+         ├─► Combine test results
+         ├─► Aggregate coverage data
+         └─► Generate final report
+```
+
+**Key Features:**
+- **4x Parallelization**: Tests split across 4 GitHub Actions runners
+- **Blob Reporter**: Efficient binary format for test results
+- **Coverage Merging**: Aggregates coverage from all shards
+- **Smart Distribution**: Vitest automatically balances test files
+- **Performance**: ~50-75% faster than sequential execution
+
+**How it works:**
+1. Each shard runs `vitest --reporter=blob --shard=N/4`
+2. Results stored in `.vitest-reports/` directory
+3. Artifacts uploaded from each shard
+4. Merge job downloads all artifacts
+5. `vitest --merge-reports` combines everything
+
+### SDLC Workflow (`sdlc-demo.yml`)
+
+The complete SDLC pipeline demonstrates:
 
 ### Job Flow
 
