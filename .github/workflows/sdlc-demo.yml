@@ -113,13 +113,6 @@ jobs:
           echo "Commit: ${{ github.sha }}" >> dist/build.txt
           echo "✅ Build complete!"
       
-      # Cache the build artifacts for test jobs
-      - name: Cache build artifacts
-        uses: actions/cache@v4
-        with:
-          path: demo-app/dist
-          key: build-cache-${{ github.sha }}-${{ github.run_number }}
-      
       # Upload build artifacts for release job
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
