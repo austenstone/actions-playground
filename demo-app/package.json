@@ -1,0 +1,17 @@
+{
+  "name": "demo-app",
+  "version": "1.0.0",
+  "description": "Demo application for SDLC workflow",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "echo 'Building application...' && mkdir -p dist && echo 'Build complete' > dist/output.txt",
+    "test": "echo 'Running tests...'",
+    "lint": "echo 'Linting code...'",
+    "start": "node src/index.js"
+  },
+  "keywords": ["demo", "sdlc"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
