@@ -150,6 +150,7 @@ Build
 - **Parallelization**: 5 jobs run concurrently (~3-4 min total)
 - **Matrix Testing**: Unit tests across 3 Node.js versions
 - **Service Containers**: Real PostgreSQL and Redis instances
+- **Test Sharding**: Parallel test execution across multiple runners 🆕
 
 ### Security Features
 
