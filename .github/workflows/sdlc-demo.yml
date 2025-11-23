@@ -32,24 +32,24 @@ jobs:
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: demo-app/package-lock.json
       
-      - name: Build application
-        run: |
-          mkdir -p demo-app/dist
-          echo "// Built on $(date)" > demo-app/dist/bundle.js
-          echo "// Build #${{ github.run_number }}" >> demo-app/dist/bundle.js
-          cat demo-app/src/app.js >> demo-app/dist/bundle.js
-          echo "Build completed successfully"
-      
-      - name: Save build cache
+      - name: Restore build cache
+        id: cache-build
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: demo-app/dist
           key: build-${{ env.CACHE_VERSION }}-${{ hashFiles('demo-app/src/**') }}
           restore-keys: |
             build-${{ env.CACHE_VERSION }}-
+      
+      - name: Build application
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p demo-app/dist
+          echo "// Built on $(date)" > demo-app/dist/bundle.js
+          echo "// Build #${{ github.run_number }}" >> demo-app/dist/bundle.js
+          cat demo-app/src/app.js >> demo-app/dist/bundle.js
+          echo "Build completed successfully"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
