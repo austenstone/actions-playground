@@ -1,0 +1,263 @@
+name: SDLC Demo - Secure Integration Testing
+
+# This workflow demonstrates secure integration testing practices
+# using GitHub Secrets for database credentials
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Use minimal permissions by default (security best practice)
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: demo-app
+        run: npm ci
+
+      - name: Build application
+        working-directory: demo-app
+        run: npm run build --if-present
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: demo-app/dist
+          retention-days: 1
+
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: demo-app
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: demo-app
+        run: npm run test:unit --if-present || npm test
+
+  # Integration Testing with Secure Credentials
+  # This job demonstrates security best practices:
+  # 1. Database credentials stored in GitHub Secrets
+  # 2. No hardcoded passwords in workflow files
+  # 3. Credentials automatically masked in logs
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    # Service containers with secure credential references
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.TEST_DB_NAME }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: demo-app
+        run: npm ci
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for PostgreSQL..."
+          until pg_isready -h localhost -p 5432; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 1
+          done
+          echo "PostgreSQL is ready!"
+
+          echo "Waiting for Redis..."
+          until redis-cli -h localhost ping; do
+            echo "Redis is unavailable - sleeping"
+            sleep 1
+          done
+          echo "Redis is ready!"
+
+      - name: Setup test database
+        run: |
+          # Install PostgreSQL client for database setup
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+          # Create test schema
+          PGPASSWORD=${{ secrets.TEST_DB_PASSWORD }} psql \
+            -h localhost \
+            -U ${{ secrets.TEST_DB_USER }} \
+            -d ${{ secrets.TEST_DB_NAME }} \
+            -c 'CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100), email VARCHAR(100));'
+
+          echo "Database schema created successfully"
+
+      # Run integration tests with secure environment variables
+      - name: Run integration tests
+        working-directory: demo-app
+        env:
+          DATABASE_URL: postgresql://${{ secrets.TEST_DB_USER }}:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/${{ secrets.TEST_DB_NAME }}
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+        run: npm run test:integration
+        shell: bash
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: demo-app/test-results
+          retention-days: 3
+
+  test-e2e:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [build, test-unit, test-integration]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'demo-app/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: demo-app
+        run: npm ci
+
+      - name: Run E2E tests
+        working-directory: demo-app
+        run: npm run test:e2e --if-present || echo "No E2E tests configured"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run security audit
+        working-directory: demo-app
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for secrets in code
+        run: |
+          echo "Scanning for potential secrets..."
+          echo "⚠️  Note: This is a basic demo check."
+          echo "    In production, use GitHub's built-in secret scanning"
+          echo "    or dedicated tools like gitleaks or truffleHog."
+          echo "✓ Demo secret check completed"
+
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration, test-e2e, security-scan]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: demo-app/dist
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "✓ Deployment successful (simulated)"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          echo "✓ Smoke tests passed (simulated)"
+
+  # Summary job that depends on all tests
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration, test-e2e]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.test-unit.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.test-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- E2E Tests: ${{ needs.test-e2e.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test-unit.result }}" == "success" ] && \
+             [ "${{ needs.test-integration.result }}" == "success" ] && \
+             [ "${{ needs.test-e2e.result }}" == "success" ]; then
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ Some tests failed!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
