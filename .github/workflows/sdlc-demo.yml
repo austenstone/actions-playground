@@ -146,12 +146,12 @@ jobs:
         working-directory: ./demo-app
         run: npm ci
       
-      # Restore build cache
-      - name: Restore build cache
-        uses: actions/cache@v4
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: demo-app/dist
-          key: build-cache-${{ github.sha }}-${{ github.run_number }}
+          name: build-output
+          path: ./demo-app/dist
       
       - name: Run unit tests
         working-directory: ./demo-app
@@ -180,12 +180,12 @@ jobs:
         working-directory: ./demo-app
         run: npm ci
       
-      # Restore build cache
-      - name: Restore build cache
-        uses: actions/cache@v4
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: demo-app/dist
-          key: build-cache-${{ github.sha }}-${{ github.run_number }}
+          name: build-output
+          path: ./demo-app/dist
       
       - name: Run integration tests
         working-directory: ./demo-app
@@ -213,12 +213,12 @@ jobs:
         working-directory: ./demo-app
         run: npm ci
       
-      # Restore build cache
-      - name: Restore build cache
-        uses: actions/cache@v4
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: demo-app/dist
-          key: build-cache-${{ github.sha }}-${{ github.run_number }}
+          name: build-output
+          path: ./demo-app/dist
       
       - name: Run E2E tests
         working-directory: ./demo-app
