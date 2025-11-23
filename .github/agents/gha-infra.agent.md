@@ -1,7 +1,7 @@
 ---
 name: gha-infra
 description: Specialist in Cloud connectivity (AWS/Azure/GCP), Docker, and Kubernetes integrations.
-tools: ['read/readFile', 'search', 'web', 'shell', 'ms-vscode.vscode-websearchforcopilot/websearch']
+tools: ['read/readFile', 'github-context/get_me', 'search', 'web', 'shell', 'ms-vscode.vscode-websearchforcopilot/websearch']
 handoffs:
   - label: Implement Config
     agent: gha-developer

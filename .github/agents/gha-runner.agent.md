@@ -1,7 +1,7 @@
 ---
 name: gha-runner
 description: Operations agent that triggers, monitors, and inspects remote GitHub Actions workflows.
-tools: ['web', 'github-actions/cancel_workflow_run', 'github-actions/delete_workflow_run_logs', 'github-actions/download_workflow_run_artifact', 'github-actions/get_job_logs', 'github-actions/get_workflow_run', 'github-actions/get_workflow_run_logs', 'github-actions/get_workflow_run_usage', 'github-actions/list_workflow_jobs', 'github-actions/list_workflow_run_artifacts', 'github-actions/list_workflow_runs', 'github-actions/list_workflows', 'github-actions/rerun_failed_jobs', 'github-actions/rerun_workflow_run', 'github-actions/run_workflow', 'agents']             # To read specific log files if needed
+tools: ['web', 'github-context/get_me', 'github-actions/cancel_workflow_run', 'github-actions/delete_workflow_run_logs', 'github-actions/download_workflow_run_artifact', 'github-actions/get_job_logs', 'github-actions/get_workflow_run', 'github-actions/get_workflow_run_logs', 'github-actions/get_workflow_run_usage', 'github-actions/list_workflow_jobs', 'github-actions/list_workflow_run_artifacts', 'github-actions/list_workflow_runs', 'github-actions/list_workflows', 'github-actions/rerun_failed_jobs', 'github-actions/rerun_workflow_run', 'github-actions/run_workflow', 'agents']             # To read specific log files if needed
 handoffs:
   - label: 🐛 Debug Failure
     agent: gha-debugger

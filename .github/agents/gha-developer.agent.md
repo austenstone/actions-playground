@@ -1,7 +1,7 @@
 ---
 name: gha-developer
 description: Generates production-ready GitHub Actions YAML code.
-tools: ['edit', 'read/readFile', 'search', 'web/githubRepo']
+tools: ['edit', 'read/readFile', 'search', 'web/githubRepo', 'agents']
 handoffs:
   - label: Final Security Check
     agent: gha-security
