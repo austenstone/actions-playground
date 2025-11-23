@@ -1,0 +1,261 @@
+name: SDLC Demo Workflow
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20
+
+# Set minimal permissions for GITHUB_TOKEN at workflow level
+permissions:
+  contents: read
+
+jobs:
+  # Initial setup and dependency installation
+  setup:
+    name: Setup Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: |
+          npm ci
+  
+  # Linting and code quality checks
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      - name: Run linter
+        working-directory: ./demo-app
+        run: |
+          echo "Running ESLint..."
+          echo "✅ Linting passed!"
+  
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      - name: Run security audit
+        working-directory: ./demo-app
+        run: |
+          echo "Running npm audit..."
+          echo "✅ Security scan passed!"
+  
+  # Build the application
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      - name: Build application
+        working-directory: ./demo-app
+        run: |
+          mkdir -p dist
+          echo "Building application..."
+          echo "Built on $(date)" > dist/build.txt
+          echo "Build #${{ github.run_number }}" >> dist/build.txt
+          echo "Commit: ${{ github.sha }}" >> dist/build.txt
+          echo "✅ Build complete!"
+      
+      # Upload build artifacts for release job
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: demo-app/dist
+          retention-days: 1
+      
+      - name: Set version output
+        id: set-version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+  
+  # Unit tests
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./demo-app/dist
+      
+      - name: Run unit tests
+        working-directory: ./demo-app
+        run: |
+          echo "Running unit tests..."
+          ls -la dist/
+          cat dist/build.txt
+          echo "✅ Unit tests passed!"
+  
+  # Integration tests
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./demo-app/dist
+      
+      - name: Run integration tests
+        working-directory: ./demo-app
+        run: |
+          echo "Running integration tests..."
+          ls -la dist/
+          echo "✅ Integration tests passed!"
+  
+  # E2E tests
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./demo-app
+        run: npm ci
+      
+      # Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./demo-app/dist
+      
+      - name: Run E2E tests
+        working-directory: ./demo-app
+        run: |
+          echo "Running E2E tests..."
+          echo "✅ E2E tests passed!"
+  
+  # Release/Deploy
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, test-unit, test-integration, test-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Download the build artifact
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./demo-app/dist
+      
+      - name: Create release package
+        run: |
+          echo "Creating release package..."
+          echo "Version: ${{ needs.build.outputs.version }}"
+          ls -la demo-app/dist/
+          cat demo-app/dist/build.txt
+          echo "✅ Release package created!"
+      
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "✅ Deployment successful!"
