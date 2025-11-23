@@ -1,0 +1,171 @@
+name: SDLC Demo - Build, Test, Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CACHE_VERSION: v1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: demo-app/package-lock.json
+      
+      - name: Build application
+        run: |
+          mkdir -p demo-app/dist
+          echo "// Built on $(date)" > demo-app/dist/bundle.js
+          echo "// Build #${{ github.run_number }}" >> demo-app/dist/bundle.js
+          cat demo-app/src/app.js >> demo-app/dist/bundle.js
+          echo "Build completed successfully"
+      
+      - name: Save build cache
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: demo-app/dist
+          key: build-${{ env.CACHE_VERSION }}-${{ hashFiles('demo-app/src/**') }}
+          restore-keys: |
+            build-${{ env.CACHE_VERSION }}-
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: build-artifacts
+          path: demo-app/dist/
+          retention-days: 1
+
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: Restore build cache
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: demo-app/dist
+          key: build-${{ env.CACHE_VERSION }}-${{ hashFiles('demo-app/src/**') }}
+          restore-keys: |
+            build-${{ env.CACHE_VERSION }}-
+      
+      - name: Run unit tests
+        run: |
+          echo "Running unit tests..."
+          if [ -f demo-app/dist/bundle.js ]; then
+            echo "✅ Build artifacts found in cache"
+            cat demo-app/dist/bundle.js
+          else
+            echo "❌ Build artifacts not found - cache miss"
+            exit 1
+          fi
+          echo "Unit tests passed!"
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: Restore build cache
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: demo-app/dist
+          key: build-${{ env.CACHE_VERSION }}-${{ hashFiles('demo-app/src/**') }}
+          restore-keys: |
+            build-${{ env.CACHE_VERSION }}-
+      
+      - name: Run integration tests
+        run: |
+          echo "Running integration tests..."
+          if [ -f demo-app/dist/bundle.js ]; then
+            echo "✅ Build artifacts found in cache"
+            cat demo-app/dist/bundle.js
+          else
+            echo "❌ Build artifacts not found - cache miss"
+            exit 1
+          fi
+          echo "Integration tests passed!"
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        with:
+          name: build-artifacts
+          path: demo-app/dist
+      
+      - name: Run E2E tests
+        run: |
+          echo "Running E2E tests..."
+          if [ -f demo-app/dist/bundle.js ]; then
+            echo "✅ Build artifacts found"
+            cat demo-app/dist/bundle.js
+          else
+            echo "❌ Build artifacts not found"
+            exit 1
+          fi
+          echo "E2E tests passed!"
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, test-unit, test-integration, test-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 10
+    
+    environment:
+      name: production
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        with:
+          name: build-artifacts
+          path: demo-app/dist
+      
+      - name: Deploy application
+        run: |
+          echo "🚀 Deploying to production..."
+          ls -la demo-app/dist/
+          cat demo-app/dist/bundle.js
+          echo "✅ Deployment completed successfully!"
