@@ -11,7 +11,7 @@ export default defineConfig({
     // Coverage configuration
     coverage: {
       provider: 'v8',
-      reporter: ['json', 'lcov', 'text', 'clover', 'json-summary'],
+      reporter: ['json', 'text', 'clover', 'json-summary'],  // Removed lcov to avoid Windows path issues
       reportsDirectory: './coverage',
       include: ['src/**/*.js'],
       exclude: [
