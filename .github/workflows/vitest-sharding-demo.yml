@@ -101,7 +101,7 @@ jobs:
         working-directory: demo-app
         run: |
           echo "::group::🎯 Running Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}"
-          npm run test:shard -- --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --coverage
+          npm run test:shard -- --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
           echo "::endgroup::"
         env:
           # These ensure consistent test execution
@@ -185,7 +185,7 @@ jobs:
         working-directory: demo-app
         run: |
           echo "::group::🔀 Merging reports from all shards"
-          npm run test:merge -- --reporter=default --reporter=json --reporter=html --coverage
+          npm run test:merge -- --reporter=default --reporter=json --coverage
           echo "::endgroup::"
       
       # 📤 Upload merged coverage report
