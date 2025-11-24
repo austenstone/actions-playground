@@ -10,7 +10,6 @@ export default defineConfig({
     
     // Coverage configuration
     coverage: {
-      enabled: true,
       provider: 'v8',
       reporter: ['json', 'lcov', 'text', 'clover', 'json-summary'],
       reportsDirectory: './coverage',
