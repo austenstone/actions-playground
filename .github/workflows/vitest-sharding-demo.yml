@@ -108,16 +108,8 @@ jobs:
           CI: true
           NODE_ENV: test
       
-      # 📊 Critical Step: Upload blob reports with coverage
+      # 📊 Critical Step: Upload blob reports
       # The blob reporter creates binary reports that can be merged later
-      # Note: .vitest-reports is a hidden directory but is still captured
-      - name: "DEBUG: List reports directory"
-        if: always()
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing demo-app/.vitest-reports:"
-          ls -la demo-app/.vitest-reports/ || echo "Directory does not exist!"
-      
       - name: 📤 Upload blob report
         if: ${{ !cancelled() }}  # Upload even if tests fail
         uses: actions/upload-artifact@v4
@@ -125,7 +117,7 @@ jobs:
           name: blob-report-${{ matrix.shardIndex }}
           path: demo-app/.vitest-reports/
           retention-days: 1  # Short retention since only needed for this workflow
-          if-no-files-found: warn  # Change to warn to see if other issues exist
+          if-no-files-found: warn
       
       - name: 📋 Shard summary
         if: always()
