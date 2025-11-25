@@ -33,15 +33,16 @@ jobs:
           JFR_VERSION="1.0-beta-32"
           curl -sL "https://github.com/jenkinsci/jenkinsfile-runner/releases/download/${JFR_VERSION}/jenkinsfile-runner-${JFR_VERSION}.zip" -o jfr.zip
           unzip -q jfr.zip
-          chmod +x jenkinsfile-runner/bin/jenkinsfile-runner
-          echo "=== JFR Directory Structure ==="
-          ls -la jenkinsfile-runner/
-          ls -la jenkinsfile-runner/bin/ || true
+          echo "=== Extracted contents ==="
+          ls -la
+          echo "=== Finding jenkinsfile-runner ==="
+          find . -name "jenkinsfile-runner" -type f 2>/dev/null || echo "Not found"
 
       - name: Run Jenkinsfile
         run: |
           set -euo pipefail
-          ./jenkinsfile-runner/bin/jenkinsfile-runner \
-            -w ./jenkinsfile-runner/war \
-            -p ./jenkinsfile-runner/plugins \
+          chmod +x ./jenkinsfile-runner-1.0-beta-32/bin/jenkinsfile-runner
+          ./jenkinsfile-runner-1.0-beta-32/bin/jenkinsfile-runner \
+            -w ./jenkinsfile-runner-1.0-beta-32/war \
+            -p ./jenkinsfile-runner-1.0-beta-32/plugins \
             -f ./Jenkinsfile
