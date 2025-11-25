@@ -50,7 +50,7 @@ jobs:
           # Download plugins using jenkins-plugin-manager
           echo "📦 Downloading plugins..."
           mkdir -p plugins
-          curl -sL "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.14.0/jenkins-plugin-manager-2.14.0.jar" -o jenkins-plugin-manager.jar
+          curl -sL "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.13.2/jenkins-plugin-manager-2.13.2.jar" -o jenkins-plugin-manager.jar
           java -jar jenkins-plugin-manager.jar \
             --war jenkins.war \
             --plugin-download-directory plugins \
