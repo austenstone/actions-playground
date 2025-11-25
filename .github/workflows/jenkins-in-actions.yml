@@ -3,25 +3,27 @@ on:
   push:
   workflow_dispatch:
 jobs:
-  checkout:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/upload-artifact@v5
-        with:
-          name: jenkinsfile
-          path: Jenkinsfile
   jfr-container-action-pipeline:
     runs-on: ubuntu-latest
     container:
       image: jenkins/jenkinsfile-runner
     steps:
-      - uses: actions/download-artifact@v6
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          name: jenkinsfile
-      - name: Jenkins pipeline in the container
-        uses:
-          jenkinsci/jfr-container-action@master
+          distribution: 'temurin'
+          java-version: '11'
+
+      # Downloads the Jenkinsfile Runner JAR to the host
+      - name: Setup Jenkinsfile Runner
+        uses: jenkinsci/jfr-setup-action@master
+
+      # Runs the JAR directly on the host
+      - name: Execute Pipeline
+        uses: jenkinsci/jfr-runtime-action@master
         with:
           command: run
           jenkinsfile: Jenkinsfile
