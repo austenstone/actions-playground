@@ -11,60 +11,21 @@ on:
 permissions:
   contents: read
 
-env:
-  JFR_VERSION: '1.0-beta-32'
-  JENKINS_VERSION: '2.375.3'  # Must be compatible with JFR 1.0-beta-32
-
 jobs:
   jfr:
     name: Run Jenkinsfile
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    container:
+      image: ghcr.io/jenkinsci/jenkinsfile-runner:latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Setup Java
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Download and setup Jenkinsfile Runner
-        run: |
-          set -euo pipefail
-
-          # Download and extract JFR slim package
-          echo "📦 Downloading Jenkinsfile Runner ${JFR_VERSION}..."
-          curl -sL "https://github.com/jenkinsci/jenkinsfile-runner/releases/download/${JFR_VERSION}/jenkinsfile-runner-${JFR_VERSION}.zip" -o jfr.zip
-          unzip -q jfr.zip -d jfr
-          chmod +x ./jfr/bin/jenkinsfile-runner
-
-          # Download and explode Jenkins WAR (required for slim package)
-          echo "📦 Downloading Jenkins WAR ${JENKINS_VERSION}..."
-          mkdir -p jenkins-war
-          curl -sL "https://get.jenkins.io/war-stable/${JENKINS_VERSION}/jenkins.war" -o jenkins.war
-          unzip -q jenkins.war -d jenkins-war
-
-          # Download plugins using jenkins-plugin-manager
-          echo "📦 Downloading plugins..."
-          mkdir -p plugins
-          curl -sL "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.13.2/jenkins-plugin-manager-2.13.2.jar" -o jenkins-plugin-manager.jar
-          java -jar jenkins-plugin-manager.jar \
-            --war jenkins.war \
-            --plugin-download-directory plugins \
-            --plugins workflow-aggregator:latest
-
-          echo "✅ Setup complete"
-          ls -la jfr/bin/
-          ls -la jenkins-war/ | head -20
-          ls -la plugins/ | head -20
-
       - name: Run Jenkinsfile
         run: |
-          set -euo pipefail
-          ./jfr/bin/jenkinsfile-runner \
-            --jenkins-war ./jenkins-war \
-            --plugins ./plugins \
+          /app/bin/jenkinsfile-runner \
+            --jenkins-war /app/jenkins \
+            --plugins /usr/share/jenkins/ref/plugins \
             --file ./Jenkinsfile
