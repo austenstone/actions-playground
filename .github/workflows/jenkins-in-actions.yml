@@ -1,0 +1,17 @@
+name: CI
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  jfr-container-action-pipeline:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/jenkinsci/jenkinsfile-runner:master
+    steps:
+      - uses: actions/checkout@v2
+      - name: Jenkins pipeline in the container
+        uses:
+          jenkinsci/jfr-container-action@master
+        with:
+          command: run
+          jenkinsfile: Jenkinsfile
