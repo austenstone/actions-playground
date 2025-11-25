@@ -1,4 +1,4 @@
-name: CI
+name: Jenkinsfile in Actions
 on:
   push:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     container:
       image: ghcr.io/jenkinsci/jenkinsfile-runner:master
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
       - name: Jenkins pipeline in the container
         uses:
           jenkinsci/jfr-container-action@master
