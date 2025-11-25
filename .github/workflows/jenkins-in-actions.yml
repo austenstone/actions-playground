@@ -3,12 +3,22 @@ on:
   push:
   workflow_dispatch:
 jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/upload-artifact@v5
+        with:
+          name: jenkinsfile
+          path: Jenkinsfile
   jfr-container-action-pipeline:
     runs-on: ubuntu-latest
     container:
       image: jenkins/jenkinsfile-runner
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
+        with:
+          name: jenkinsfile
       - name: Jenkins pipeline in the container
         uses:
           jenkinsci/jfr-container-action@master
