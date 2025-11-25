@@ -32,13 +32,16 @@ jobs:
           set -euo pipefail
           JFR_VERSION="1.0-beta-32"
           curl -sL "https://github.com/jenkinsci/jenkinsfile-runner/releases/download/${JFR_VERSION}/jenkinsfile-runner-${JFR_VERSION}.zip" -o jfr.zip
-          unzip -q jfr.zip -d jfr
-          chmod +x jfr/bin/jenkinsfile-runner
+          unzip -q jfr.zip
+          chmod +x jenkinsfile-runner/bin/jenkinsfile-runner
+          echo "=== JFR Directory Structure ==="
+          ls -la jenkinsfile-runner/
+          ls -la jenkinsfile-runner/bin/ || true
 
       - name: Run Jenkinsfile
         run: |
           set -euo pipefail
-          ./jfr/bin/jenkinsfile-runner \
-            -w ./jfr/jenkins \
-            -p ./jfr/plugins \
+          ./jenkinsfile-runner/bin/jenkinsfile-runner \
+            -w ./jenkinsfile-runner/war \
+            -p ./jenkinsfile-runner/plugins \
             -f ./Jenkinsfile
