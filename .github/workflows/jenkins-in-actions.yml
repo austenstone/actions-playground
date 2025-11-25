@@ -13,7 +13,7 @@ permissions:
 
 env:
   JFR_VERSION: '1.0-beta-32'
-  JENKINS_VERSION: '2.479.2'
+  JENKINS_VERSION: '2.375.3'  # Must be compatible with JFR 1.0-beta-32
 
 jobs:
   jfr:
