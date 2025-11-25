@@ -13,11 +13,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       # Downloads the Jenkinsfile Runner JAR to the host
       - name: Setup Jenkinsfile Runner
         uses: jenkinsci/jfr-setup-action@master
+        with:
+          jenkins-version: 2.462.3
 
       # Runs the JAR directly on the host
       - name: Execute Pipeline
