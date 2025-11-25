@@ -6,7 +6,7 @@ jobs:
   jfr-container-action-pipeline:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/jenkinsci/jenkinsfile-runner:master
+      image: jenkins/jenkinsfile-runner
     steps:
       - uses: actions/checkout@v5
       - name: Jenkins pipeline in the container
