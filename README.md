@@ -47,6 +47,8 @@ This repository serves as a comprehensive collection of resources and examples d
 - [Migrate to GitHub Actions](https://docs.github.com/en/actions/tutorials/migrate-to-github-actions) - Official migration guide.
 - [The journey from CircleCI to GitHub Actions](https://evilmartians.com/chronicles/journey-from-circleci-to-github-actions) - Evil Martians discuss migration
 - [PyTorch dev podcast](https://pytorch-dev-podcast.simplecast.com/episodes/new-ci-uTFBJiq_) - PyTorch moved all of its CI from CircleCI to GitHub Actions.
+- [Breaking Up with Jenkins: Why We Migrated to GitHub Actions](https://medium.com/@pksinghbond798352/breaking-up-with-jenkins-why-we-migrated-to-github-actions-08fb6b9d9c58) - Reduce maintenance and improve developer workflows via native integration.
+- [What are the benefits and challenges of migrating from Jenkins to GitHub Actions?](https://www.linkedin.com/advice/1/what-benefits-challenges-migrating-from-jenkins-github-actions) - LinkedIn advice.
 
 ### 🌍 Community Actions & Related Libraries
 - [Awesome Actions](https://github.com/sdras/awesome-actions) - A curated list of awesome actions to use in your workflows.
