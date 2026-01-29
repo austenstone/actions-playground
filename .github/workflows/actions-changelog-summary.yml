@@ -128,7 +128,7 @@ jobs:
         id: ai-summary
         uses: actions/ai-inference@v1
         with:
-          model: anthropic/claude-sonnet-4
+          model: openai/gpt-4o
           max-tokens: 2000
           system-prompt: |
             You are an expert technical writer specializing in GitHub Actions and CI/CD workflows.
@@ -165,7 +165,7 @@ jobs:
           ---
           
           📖 **Source:** [GitHub Blog Changelog](https://github.blog/changelog/?label=actions)
-          🤖 **Powered by:** [actions/ai-inference](https://github.com/actions/ai-inference) with `anthropic/claude-sonnet-4`
+          🤖 **Powered by:** [actions/ai-inference](https://github.com/actions/ai-inference) with `openai/gpt-4o`
           SUMMARY_FOOTER
 
       - name: No updates available
