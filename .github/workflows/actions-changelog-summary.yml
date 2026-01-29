@@ -130,12 +130,19 @@ jobs:
         with:
           model: anthropic/claude-sonnet-4
           max-tokens: 2000
-          prompt-file: .github/prompts/changelog-summary.prompt.yml
-          input: |
-            month_name: ${{ steps.month.outputs.month_name }}
-            year: ${{ steps.month.outputs.year }}
-          file_input: |
-            changelog_content: ./changelog_items.txt
+          system-prompt: |
+            You are an expert technical writer specializing in GitHub Actions and CI/CD workflows.
+            Your task is to create a clear, engaging summary of GitHub Actions changelog updates.
+            
+            Guidelines:
+            - Group related changes into logical categories (e.g., "🚀 Performance", "🔒 Security", "✨ New Features", "💰 Pricing", "⚠️ Breaking Changes", "🔧 Improvements")
+            - Highlight the most impactful changes first
+            - Use emojis effectively to improve readability and categorization
+            - Include brief explanations of why each change matters to developers
+            - Keep the summary concise but informative
+            - Format using GitHub-flavored Markdown
+            - If there are action items or things developers should do, call them out clearly
+          prompt-file: ./changelog_items.txt
 
       - name: Generate Job Summary
         if: steps.fetch-feed.outputs.has_items == 'true'
