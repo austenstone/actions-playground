@@ -23,6 +23,7 @@ jobs:
           echo "month_name=$(date +'%B')" >> "$GITHUB_OUTPUT"
           echo "year=$(date +'%Y')" >> "$GITHUB_OUTPUT"
           echo "month_num=$(date +'%m')" >> "$GITHUB_OUTPUT"
+          echo "generated=$(date -u +'%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
 
       - name: Fetch Actions Changelog RSS Feed
         id: fetch-feed
@@ -134,12 +135,15 @@ jobs:
             You are an expert technical writer specializing in GitHub Actions and CI/CD workflows.
             Your task is to create a clear, engaging summary of GitHub Actions changelog updates.
             
+            Structure (IMPORTANT - follow this order):
+            1. Start with a brief 2-3 sentence executive summary/TL;DR of the most important changes
+            2. Then list key highlights as bullet points (one line each)
+            3. Finally, provide detailed sections grouped by category with full explanations
+            
             Guidelines:
-            - Group related changes into logical categories (e.g., "🚀 Performance", "🔒 Security", "✨ New Features", "💰 Pricing", "⚠️ Breaking Changes", "🔧 Improvements")
-            - Highlight the most impactful changes first
+            - Group detailed sections into logical categories (e.g., "🚀 Performance", "🔒 Security", "✨ New Features", "💰 Pricing", "⚠️ Breaking Changes", "🔧 Improvements")
             - Use emojis effectively to improve readability and categorization
             - Include brief explanations of why each change matters to developers
-            - Keep the summary concise but informative
             - Format using GitHub-flavored Markdown
             - If there are action items or things developers should do, call them out clearly
           prompt-file: ./changelog_items.txt
@@ -147,15 +151,15 @@ jobs:
       - name: Generate Job Summary
         if: steps.fetch-feed.outputs.has_items == 'true'
         run: |
-          cat << 'SUMMARY_HEADER' >> "$GITHUB_STEP_SUMMARY"
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           # 🚀 GitHub Actions Changelog Summary
           
           **Period:** ${{ steps.month.outputs.month_name }} ${{ steps.month.outputs.year }}
-          **Generated:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          **Generated:** ${{ steps.month.outputs.generated }}
           
           ---
           
-          SUMMARY_HEADER
+          EOF
           
           # Add the AI-generated summary
           cat "${{ steps.ai-summary.outputs.response-file }}" >> "$GITHUB_STEP_SUMMARY"
