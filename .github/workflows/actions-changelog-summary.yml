@@ -1,0 +1,177 @@
+name: GitHub Actions Changelog Summary
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  summarize-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get current month info
+        id: month
+        run: |
+          echo "month_name=$(date +'%B')" >> "$GITHUB_OUTPUT"
+          echo "year=$(date +'%Y')" >> "$GITHUB_OUTPUT"
+          echo "month_num=$(date +'%m')" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Actions Changelog RSS Feed
+        id: fetch-feed
+        run: |
+          # Fetch the GitHub Actions changelog RSS feed
+          curl -s "https://github.blog/changelog/feed/?label=actions" -o changelog.xml
+          
+          # Parse RSS feed and extract items from the current month
+          # Extract title, link, pubDate, and description for each item
+          
+          current_month="${{ steps.month.outputs.month_num }}"
+          current_year="${{ steps.month.outputs.year }}"
+          
+          # Use xmllint to parse the RSS feed and extract items
+          # Filter to only include items from the current month
+          
+          echo "Extracting changelog items for ${{ steps.month.outputs.month_name }} $current_year..."
+          
+          # Parse XML and create a formatted list of changelog items
+          python3 << 'EOF' > changelog_items.txt
+          import xml.etree.ElementTree as ET
+          from datetime import datetime
+          import html
+          import re
+          
+          # Parse the RSS feed
+          tree = ET.parse('changelog.xml')
+          root = tree.getroot()
+          
+          # Get current month and year
+          current_month = int("${{ steps.month.outputs.month_num }}")
+          current_year = int("${{ steps.month.outputs.year }}")
+          
+          items = []
+          
+          # RSS feed structure: channel > item
+          channel = root.find('channel')
+          if channel is not None:
+              for item in channel.findall('item'):
+                  title = item.find('title')
+                  link = item.find('link')
+                  pub_date = item.find('pubDate')
+                  description = item.find('description')
+                  
+                  if pub_date is not None and title is not None:
+                      # Parse the date (format: "Wed, 22 Jan 2025 12:00:00 +0000")
+                      try:
+                          date_str = pub_date.text
+                          parsed_date = datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %z")
+                          
+                          # Check if item is from current month
+                          if parsed_date.month == current_month and parsed_date.year == current_year:
+                              title_text = title.text if title.text else "No title"
+                              link_text = link.text if link is not None and link.text else ""
+                              
+                              # Clean up description - strip HTML tags
+                              desc_text = ""
+                              if description is not None and description.text:
+                                  desc_text = html.unescape(description.text)
+                                  desc_text = re.sub(r'<[^>]+>', '', desc_text)
+                                  desc_text = desc_text.strip()[:500]  # Limit length
+                              
+                              items.append({
+                                  'date': parsed_date.strftime("%Y-%m-%d"),
+                                  'title': title_text,
+                                  'link': link_text,
+                                  'description': desc_text
+                              })
+                      except ValueError as e:
+                          print(f"Date parse error: {e}")
+                          continue
+          
+          # Sort by date descending
+          items.sort(key=lambda x: x['date'], reverse=True)
+          
+          # Format output
+          if items:
+              print(f"# GitHub Actions Changelog - {current_month}/{current_year}\n")
+              print(f"Found {len(items)} changelog items for this month.\n")
+              for item in items:
+                  print(f"## {item['date']}: {item['title']}")
+                  if item['link']:
+                      print(f"Link: {item['link']}")
+                  if item['description']:
+                      print(f"\n{item['description']}\n")
+                  print("---\n")
+          else:
+              print("No changelog items found for the current month.")
+          EOF
+          
+          echo "Changelog items extracted:"
+          cat changelog_items.txt
+          
+          # Check if we have any items
+          if [ ! -s changelog_items.txt ] || grep -q "No changelog items found" changelog_items.txt; then
+            echo "has_items=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_items=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarize with AI
+        if: steps.fetch-feed.outputs.has_items == 'true'
+        id: ai-summary
+        uses: actions/ai-inference@v1
+        with:
+          model: anthropic/claude-sonnet-4
+          max-tokens: 2000
+          prompt-file: .github/prompts/changelog-summary.prompt.yml
+          input: |
+            month_name: ${{ steps.month.outputs.month_name }}
+            year: ${{ steps.month.outputs.year }}
+          file_input: |
+            changelog_content: ./changelog_items.txt
+
+      - name: Generate Job Summary
+        if: steps.fetch-feed.outputs.has_items == 'true'
+        run: |
+          cat << 'SUMMARY_HEADER' >> "$GITHUB_STEP_SUMMARY"
+          # 🚀 GitHub Actions Changelog Summary
+          
+          **Period:** ${{ steps.month.outputs.month_name }} ${{ steps.month.outputs.year }}
+          **Generated:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          
+          ---
+          
+          SUMMARY_HEADER
+          
+          # Add the AI-generated summary
+          cat "${{ steps.ai-summary.outputs.response-file }}" >> "$GITHUB_STEP_SUMMARY"
+          
+          cat << 'SUMMARY_FOOTER' >> "$GITHUB_STEP_SUMMARY"
+          
+          ---
+          
+          📖 **Source:** [GitHub Blog Changelog](https://github.blog/changelog/?label=actions)
+          🤖 **Powered by:** [actions/ai-inference](https://github.com/actions/ai-inference) with `anthropic/claude-sonnet-4`
+          SUMMARY_FOOTER
+
+      - name: No updates available
+        if: steps.fetch-feed.outputs.has_items != 'true'
+        run: |
+          cat << EOF >> "$GITHUB_STEP_SUMMARY"
+          # 📭 GitHub Actions Changelog Summary
+          
+          **Period:** ${{ steps.month.outputs.month_name }} ${{ steps.month.outputs.year }}
+          
+          ---
+          
+          No new GitHub Actions changelog items found for this month yet.
+          
+          Check back later or view the full changelog at [GitHub Blog](https://github.blog/changelog/?label=actions).
+          EOF
