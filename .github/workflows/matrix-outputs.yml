@@ -9,7 +9,7 @@ on:
 
 jobs:
   matrix-job:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     continue-on-error: true
     outputs:
       result: ${{ toJson(steps) }}
@@ -25,7 +25,7 @@ jobs:
           echo "${{ matrix.os }}_random_number=$RANDOM_NUMBER" >> "$GITHUB_OUTPUT"
           echo "${{ matrix.os }}_random_string=$RANDOM_STRING" >> "$GITHUB_OUTPUT"
   job2:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: matrix-job
     steps:
       - run: echo "${{ toJson(needs.matrix-job.outputs) }}"

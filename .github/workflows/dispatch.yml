@@ -33,7 +33,7 @@ on:
         type: environment
 jobs:
   test-inputs:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - run: echo "String input value → ${{ inputs.string_input }}"
       - run: echo "Number input value → ${{ inputs.number_input }}"
