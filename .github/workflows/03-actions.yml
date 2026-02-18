@@ -17,7 +17,7 @@ jobs:
   # Basic action usage demonstrating the essential actions
   basic-actions:
     name: Essential Actions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # actions/checkout - The most fundamental action
       # The 'uses' keyword specifies the action to run
@@ -54,7 +54,7 @@ jobs:
   # Demonstrates action versioning strategies
   versioning-examples:
     name: Action Versioning
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # Major version (recommended) - Gets latest v4.x.x
       - uses: actions/checkout@v5
@@ -75,7 +75,7 @@ jobs:
   # Using artifacts between jobs
   artifact-workflow:
     name: Create Artifacts
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v5
 
@@ -93,7 +93,7 @@ jobs:
 
   consume-artifacts:
     name: Download Artifacts
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: artifact-workflow
     steps:
       # actions/download-artifact - Retrieve artifacts from current workflow
@@ -125,7 +125,7 @@ jobs:
   # See: https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
   custom-actions:
     name: Custom Actions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v5
 
@@ -156,7 +156,7 @@ jobs:
   # Popular marketplace actions: https://github.com/marketplace
   community-actions:
     name: Community Actions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       id-token: write
       contents: read
@@ -219,8 +219,8 @@ jobs:
           terraform_version: "1.9.0"
 
       # docker/setup-buildx-action - Setup Docker Buildx
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Create Dockerfile
         run: |
@@ -234,7 +234,7 @@ jobs:
       
       # docker/build-push-action - Build and push Docker images
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           push: false
