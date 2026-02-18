@@ -74,7 +74,7 @@ jobs:
   # Demonstrate trigger types
   show-trigger-info:
     name: Show Trigger Information
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Event information
@@ -111,7 +111,7 @@ jobs:
   # Path filtering example
   path-based-jobs:
     name: Path-Based Execution
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'push'
     
     steps:
@@ -139,7 +139,7 @@ jobs:
   # Branch-based workflow
   branch-workflows:
     name: Branch-Specific Job
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'push'
     
     steps:

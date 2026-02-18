@@ -28,7 +28,7 @@ concurrency:
 jobs:
   build:
     name: Build Application
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -62,7 +62,7 @@ jobs:
   # Deploy to Staging
   deploy-staging:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: build
     
     environment:
@@ -96,7 +96,7 @@ jobs:
   # Deploy to Production
   deploy-production:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build, deploy-staging]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     
@@ -139,7 +139,7 @@ jobs:
   # Multi-Region Deployment
   deploy-regions:
     name: Deploy to ${{ matrix.region }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: deploy-production
     if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
     
@@ -165,7 +165,7 @@ jobs:
   # Notification
   notify:
     name: Notify Deployment Status
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build, deploy-production]
     if: always() && github.ref == 'refs/heads/main'
     
@@ -195,7 +195,7 @@ jobs:
   # Environment Reference
   environment-info:
     name: Environment Features
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: false # Reference only
     
     steps:
