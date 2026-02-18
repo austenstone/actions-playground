@@ -22,7 +22,7 @@ jobs:
   # Using GITHUB_TOKEN
   github-token:
     name: GITHUB_TOKEN Basics
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - uses: actions/checkout@v5
@@ -49,7 +49,7 @@ jobs:
   # Permission Levels
   read-only:
     name: Read-Only Permissions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     permissions:
       contents: read
@@ -67,7 +67,7 @@ jobs:
 
   write-access:
     name: Write Permissions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     permissions:
@@ -86,7 +86,7 @@ jobs:
 
   no-permissions:
     name: No Permissions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     permissions: {}
     
@@ -100,7 +100,7 @@ jobs:
   # Specific Permission Types
   packages:
     name: Package Registry
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: false # Reference only
     
     permissions:
@@ -121,7 +121,7 @@ jobs:
 
   oidc-token:
     name: OIDC Token (Cloud Access)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: false # Reference only
     
     permissions:
@@ -141,7 +141,7 @@ jobs:
 
   security-scanning:
     name: Security Scanning
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: false # Reference only
     
     permissions:
@@ -162,7 +162,7 @@ jobs:
   # Permission Reference
   permissions-reference:
     name: Permission Reference
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Available Permissions

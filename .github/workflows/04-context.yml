@@ -23,7 +23,7 @@ jobs:
   # GitHub context - Information about the workflow run
   github-context:
     name: GitHub Context
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Basic GitHub context
@@ -43,7 +43,7 @@ jobs:
   # Job and Runner contexts
   job-runner-context:
     name: Job & Runner Context
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Runner context
@@ -68,7 +68,7 @@ jobs:
   # Steps context - Reference outputs from previous steps
   steps-context:
     name: Steps Context
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Step 1 - Set output
@@ -90,7 +90,7 @@ jobs:
   # Needs context - Use outputs from dependent jobs
   job-with-outputs:
     name: Job with Outputs
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     outputs:
       version: ${{ steps.set-version.outputs.version }}
@@ -105,7 +105,7 @@ jobs:
 
   use-job-outputs:
     name: Use Job Outputs
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: job-with-outputs
     
     steps:
@@ -124,7 +124,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, blacksmith-4vcpu-windows-2025]
         node: [18, 20]
     
     steps:
@@ -146,7 +146,7 @@ jobs:
   # Inputs context (workflow_dispatch)
   inputs-context:
     name: Inputs Context
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.event_name == 'workflow_dispatch'
     
     steps:
@@ -157,7 +157,7 @@ jobs:
 
   env-context:
     name: Environment Context
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     env:
       JOB_VAR: "job-level"
@@ -174,7 +174,7 @@ jobs:
   dump_contexts_to_log:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [blacksmith-4vcpu-ubuntu-2404]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Dump GitHub context
