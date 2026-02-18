@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   Get_OIDC_ID_token:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
     - id: auth
       name: Authenticate to GCP

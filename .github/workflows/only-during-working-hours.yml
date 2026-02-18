@@ -32,7 +32,7 @@ jobs:
     - run: exit 1
       if: steps.is-work-hour.outputs.is-work-hour != 'true'
   build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: is-work-hour
     steps:
       - uses: actions/checkout@v5
