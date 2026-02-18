@@ -30,7 +30,7 @@ jobs:
     name: Test Proxy on Linux Larger Runner
     # Use GitHub-hosted larger runner with private networking
     # Label must be added at: https://github.com/enterprises/octodemo/settings/actions/github-hosted-runners/48
-    runs-on: austen-runner
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Checkout code
