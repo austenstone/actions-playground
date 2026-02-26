@@ -1,10 +1,14 @@
 workflows:
   dispatch.yml:
-    title: Dispatch
-    description: Describe your workflow here 123
+    title: Austen's Workflow
+    description: This is a test
     inputs:
       string_input:
-        description: String input (free-form text)
+        description: This is a description
+        placeholder: Austen's placeholder
+        type: multi-select
+        optionsFrom:
+          source: branches
       number_input:
         description: Number input (numeric value)
       boolean_input:
@@ -15,3 +19,12 @@ workflows:
       environment_input:
         description: Environment input (select from repository environments)
         validationMessage: Invalid environment input
+    groups:
+      - title: Group 1
+        inputs:
+          - boolean_input
+          - environment_input
+      - title: Group 2
+        inputs:
+          - number_input
+          - choice_input
