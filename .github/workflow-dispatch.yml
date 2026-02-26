@@ -1,50 +1,17 @@
-# Workflow Dispatch UI Configuration
-# Customize how your workflow inputs appear in the dispatch UI
-# Docs: https://github.com/tag-assistant/workflow-dispatch#configuration
-
 workflows:
   dispatch.yml:
-    title: "Dispatch"
-    description: "Describe your workflow here"
+    title: Dispatch
+    description: Describe your workflow here
     inputs:
       string_input:
-        label: "String Input"
-        # placeholder: "Enter string input"
-        # pattern: "^.+$"
-        # validationMessage: "Invalid string input"
+        description: String input (free-form text)
       number_input:
-        label: "Number Input"
-        # placeholder: "Enter number input"
-        # pattern: "^.+$"
-        # validationMessage: "Invalid number input"
+        description: Number input (numeric value)
       boolean_input:
-        label: "Boolean Input"
+        description: Boolean input (true/false toggle)
       choice_input:
-        label: "Choice Input"
-        # icon: "📋"
-        # placeholder: "Select choice input"
+        description: Choice input (select from predefined options)
+        placeholder: asdasd
       environment_input:
-        label: "Environment Input"
-        # placeholder: "Enter environment input"
-        # pattern: "^.+$"
-        validationMessage: "Invalid environment input"
-      tag:
-        type: select
-        label: "Release Tag"
-        optionsFrom:
-          source: tags  # options: tags, branches, releases, environments, collaborators, labels, milestones
-      groups:
-      - title: "Settings"
-        inputs: [string_input, number_input, boolean_input, choice_input, environment_input]
-    # Organize inputs into groups:
-    # groups:
-    #   - title: "Settings"
-    #     inputs: [string_input, number_input, boolean_input, choice_input, environment_input]
-    #
-    # Dynamic options from GitHub API:
-    # inputs:
-    #   tag:
-    #     type: select
-    #     label: "Release Tag"
-    #     optionsFrom:
-    #       source: tags  # options: tags, branches, releases, environments, collaborators, labels, milestones
+        description: Environment input (select from repository environments)
+        validationMessage: Invalid environment input
