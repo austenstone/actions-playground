@@ -1,7 +1,7 @@
 workflows:
   dispatch.yml:
     title: Dispatch
-    description: Describe your workflow here
+    description: Describe your workflow here 123
     inputs:
       string_input:
         description: String input (free-form text)
@@ -15,3 +15,11 @@ workflows:
       environment_input:
         description: Environment input (select from repository environments)
         validationMessage: Invalid environment input
+    groups:
+      - title: Input123
+        inputs:
+          - choice_input
+          - environment_input
+      - title: New Group222
+        inputs:
+          - boolean_input
