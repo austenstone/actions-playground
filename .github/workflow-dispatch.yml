@@ -4,9 +4,10 @@ workflows:
     description: This is a test
     inputs:
       string_input:
-        description: This is a description
+        label: Branch
+        description: Pick a branch
         placeholder: Austen's placeholder
-        type: multi-select
+        type: select
         optionsFrom:
           source: branches
       number_input:
