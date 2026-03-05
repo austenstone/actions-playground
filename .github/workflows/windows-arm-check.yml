@@ -1,0 +1,31 @@
+name: Windows ARM Server Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-windows-server:
+    runs-on: windows_4_core_arm
+    steps:
+      - name: Check Windows Version
+        run: |
+          $osInfo = Get-WmiObject -Class Win32_OperatingSystem
+          $caption = $osInfo.Caption
+          
+          Write-Host "OS: $caption"
+          
+          # Check if it's Windows Server
+          if ($caption -like "*Windows Server*") {
+            Write-Host "✓ Confirmed: Windows Server detected"
+          } else {
+            Write-Host "✗ Error: This is not Windows Server"
+            exit 1
+          }
+          
+          # Ensure it's NOT Windows 11
+          if ($caption -like "*Windows 11*") {
+            Write-Host "✗ Error: Windows 11 detected (not allowed)"
+            exit 1
+          }
+          
+          Write-Host "✓ All checks passed!"
