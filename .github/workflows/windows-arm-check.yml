@@ -181,7 +181,7 @@ jobs:
           Get-WindowsFeature 2>$null | Where-Object Installed | Select-Object -ExpandProperty Name | ForEach-Object { Write-Host "  $_" }
 
           Write-Host "`n=== RUNNING SERVICES (Top 30) ==="
-          Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 30 | ForEach-Object {
+          Get-Service -ErrorAction SilentlyContinue | Where-Object Status -eq 'Running' | Select-Object -First 30 | ForEach-Object {
             Write-Host "  $($_.Name.PadRight(30)) $($_.DisplayName)"
           }
 
