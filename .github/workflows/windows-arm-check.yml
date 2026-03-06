@@ -9,8 +9,8 @@ jobs:
     steps:
       - name: Check Windows Version
         run: |
-          $osInfo = Get-WmiObject -Class Win32_OperatingSystem
-          $caption = $osInfo.Caption
+          $os = Get-CimInstance Win32_OperatingSystem
+          $caption = $os.Caption
 
           Write-Host "OS: $caption"
 
@@ -31,13 +31,13 @@ jobs:
       - name: Operating System Details
         run: |
           Write-Host "=== OS INFO ==="
-          $os = Get-WmiObject Win32_OperatingSystem
+          $os = Get-CimInstance Win32_OperatingSystem
           Write-Host "Caption:        $($os.Caption)"
           Write-Host "Version:        $($os.Version)"
           Write-Host "Build:          $($os.BuildNumber)"
           Write-Host "Architecture:   $($os.OSArchitecture)"
-          Write-Host "Install Date:   $($os.ConvertToDateTime($os.InstallDate))"
-          Write-Host "Last Boot:      $($os.ConvertToDateTime($os.LastBootUpTime))"
+          Write-Host "Install Date:   $($os.InstallDate)"
+          Write-Host "Last Boot:      $($os.LastBootUpTime)"
           Write-Host "Serial Number:  $($os.SerialNumber)"
           Write-Host "Locale:         $($os.Locale)"
           Write-Host "System Dir:     $($os.SystemDirectory)"
@@ -46,7 +46,7 @@ jobs:
       - name: CPU Details
         run: |
           Write-Host "=== CPU INFO ==="
-          $cpu = Get-WmiObject Win32_Processor
+          $cpu = Get-CimInstance Win32_Processor
           Write-Host "Name:              $($cpu.Name)"
           Write-Host "Manufacturer:      $($cpu.Manufacturer)"
           Write-Host "Architecture:      $($cpu.Architecture)"
@@ -63,7 +63,7 @@ jobs:
       - name: Memory Details
         run: |
           Write-Host "=== MEMORY INFO ==="
-          $os = Get-WmiObject Win32_OperatingSystem
+          $os = Get-CimInstance Win32_OperatingSystem
           $totalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
           $freeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
           $usedGB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
@@ -72,15 +72,15 @@ jobs:
           Write-Host "Used RAM:      ${usedGB} GB"
 
           Write-Host "`n--- Physical DIMMs ---"
-          Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
+          Get-CimInstance Win32_PhysicalMemory | ForEach-Object {
             $capGB = [math]::Round($_.Capacity / 1GB, 2)
-            Write-Host "  Slot: $($_.DeviceLocator) | ${capGB} GB | Speed: $($_.Speed) MHz | Type: $($_.MemoryType)"
+            Write-Host "  Slot: $($_.DeviceLocator) | ${capGB} GB | Speed: $($_.Speed) MHz | Type: $($_.SMBIOSMemoryType)"
           }
 
       - name: Disk Details
         run: |
           Write-Host "=== DISK INFO ==="
-          Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
             $totalGB = [math]::Round($_.Size / 1GB, 2)
             $freeGB = [math]::Round($_.FreeSpace / 1GB, 2)
             $usedGB = [math]::Round(($_.Size - $_.FreeSpace) / 1GB, 2)
@@ -178,17 +178,17 @@ jobs:
       - name: Windows Features & Services
         run: |
           Write-Host "=== WINDOWS FEATURES (Enabled) ==="
-          Get-WindowsFeature | Where-Object Installed | Select-Object -ExpandProperty Name | ForEach-Object { Write-Host "  $_" }
+          Get-WindowsFeature 2>$null | Where-Object Installed | Select-Object -ExpandProperty Name | ForEach-Object { Write-Host "  $_" }
 
           Write-Host "`n=== RUNNING SERVICES (Top 30) ==="
-          Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 30 | ForEach-Object {
+          Get-Service -ErrorAction SilentlyContinue | Where-Object Status -eq 'Running' | Select-Object -First 30 | ForEach-Object {
             Write-Host "  $($_.Name.PadRight(30)) $($_.DisplayName)"
           }
 
       - name: GPU & Display
         run: |
           Write-Host "=== GPU INFO ==="
-          Get-WmiObject Win32_VideoController | ForEach-Object {
+          Get-CimInstance Win32_VideoController | ForEach-Object {
             Write-Host "Name:       $($_.Name)"
             Write-Host "Adapter RAM: $([math]::Round($_.AdapterRAM / 1GB, 2)) GB"
             Write-Host "Driver Ver:  $($_.DriverVersion)"
