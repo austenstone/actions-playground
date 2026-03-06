@@ -5,7 +5,7 @@ on:
 
 jobs:
   verify-windows-server:
-    runs-on: windows_4_core_arm
+    runs-on: Windows-ARM64
     steps:
       - name: Check Windows Version
         run: |
