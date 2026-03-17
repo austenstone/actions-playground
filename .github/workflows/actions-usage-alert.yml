@@ -6,7 +6,7 @@ on:
     - cron: '0 0 * * *'
 env:
   ORG: octodemo
-  GITHUB_TOKEN: ${{ secrets.AUSTEN_PAT }}
+  GH_TOKEN: ${{ secrets.AUSTEN_PAT }}
   # The threshold for the total minutes used by the Actions in the organization
   TOTAL_MINS_USED_ALERT_THRESHOLD: 50000
 
