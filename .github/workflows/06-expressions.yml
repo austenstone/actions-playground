@@ -14,7 +14,7 @@ jobs:
   # Literals & Basic Syntax
   literals:
     name: Literals & Basic Syntax
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Data Types
@@ -30,7 +30,7 @@ jobs:
   # Operators
   operators:
     name: Operators
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Comparison Operators
@@ -57,7 +57,7 @@ jobs:
   # Functions
   functions:
     name: Built-in Functions
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: String Functions
@@ -92,7 +92,7 @@ jobs:
   # Conditionals
   conditionals:
     name: Conditional Execution
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Event-Based
@@ -120,7 +120,7 @@ jobs:
   # Context Access
   context-access:
     name: Context Access
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: GitHub Context
@@ -148,7 +148,7 @@ jobs:
   # =====================================
   patterns:
     name: Common Patterns
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     
     steps:
       - name: Default Value
