@@ -107,6 +107,39 @@ jobs:
       - run: echo "native git diff — src changed, running build"
 
   # ──────────────────────────────────────────────
+  # Option 4 — GitHub CLI (gh pr diff --name-only)
+  #   Pattern from github/azure-config
+  #   Pros: no checkout needed, matches PR "Files changed" tab exactly
+  #   Cons: pull_request only (no merge_group/push), requires GITHUB_TOKEN
+  # ──────────────────────────────────────────────
+  detect-gh-cli:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.detect.outputs.relevant }}
+    steps:
+      - id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          FILE_PATTERN: '^(src/|package\.json$)'
+        run: |
+          changed=$(gh pr diff "$PR_NUMBER" --name-only --repo "${{ github.repository }}")
+          echo "$changed"
+          if echo "$changed" | grep -qE "$FILE_PATTERN"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-gh-cli:
+    needs: detect-gh-cli
+    if: needs.detect-gh-cli.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "gh cli — src changed, running build"
+
+  # ──────────────────────────────────────────────
   # Required gate job pattern
   #   This is the ONLY job marked as required in branch protection.
   #   Uses if: always() so it runs even when build jobs are skipped.
@@ -114,13 +147,14 @@ jobs:
   # ──────────────────────────────────────────────
   required-gate:
     runs-on: ubuntu-latest
-    needs: [detect-dorny, build-dorny, detect-tj, build-tj, detect-native, build-native]
+    needs: [detect-dorny, build-dorny, detect-tj, build-tj, detect-native, build-native, detect-gh-cli, build-gh-cli]
     if: always()
     steps:
       - run: |
           echo "dorny   — src=${{ needs.detect-dorny.outputs.src }}, build=${{ needs.build-dorny.result }}"
           echo "tj      — src=${{ needs.detect-tj.outputs.src_changed }}, build=${{ needs.build-tj.result }}"
           echo "native  — src=${{ needs.detect-native.outputs.relevant }}, build=${{ needs.build-native.result }}"
+          echo "gh-cli  — src=${{ needs.detect-gh-cli.outputs.relevant }}, build=${{ needs.build-gh-cli.result }}"
 
           # Fail if any build ran and didn't succeed (skipped is OK)
           failed=false
@@ -128,9 +162,11 @@ jobs:
             "${{ needs.build-dorny.result }}" \
             "${{ needs.build-tj.result }}" \
             "${{ needs.build-native.result }}" \
+            "${{ needs.build-gh-cli.result }}" \
             "${{ needs.detect-dorny.result }}" \
             "${{ needs.detect-tj.result }}" \
-            "${{ needs.detect-native.result }}"; do
+            "${{ needs.detect-native.result }}" \
+            "${{ needs.detect-gh-cli.result }}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               failed=true
             fi
