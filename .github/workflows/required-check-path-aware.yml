@@ -12,12 +12,13 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 1 — dorny/paths-filter (3k+ stars)
-  #   Pros: YAML filter syntax, multiple named filter groups
-  #   Cons: third-party action
+  #   Pros: YAML filter syntax, multiple named filter groups, predicate-quantifier
+  #   Cons: third-party action, requires checkout
   # ──────────────────────────────────────────────
   detect-dorny:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       src: ${{ steps.filter.outputs.src }}
@@ -43,8 +44,8 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 2 — tj-actions/changed-files (2.6k+ stars)
-  #   Pros: rich outputs (added/modified/deleted), glob patterns
-  #   Cons: third-party action
+  #   Pros: rich outputs (added/modified/deleted/renamed), glob patterns
+  #   Cons: third-party action, requires checkout (fetch-depth: 2)
   # ──────────────────────────────────────────────
   detect-tj:
     runs-on: ubuntu-latest
@@ -70,8 +71,8 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 3 — Native git diff (no third-party actions)
-  #   Pros: zero dependencies, full control
-  #   Cons: manual regex, no glob syntax
+  #   Pros: zero dependencies, full control, works on all event types
+  #   Cons: manual regex (no glob), requires checkout (fetch-depth: 0)
   # ──────────────────────────────────────────────
   detect-native:
     runs-on: ubuntu-latest
@@ -107,10 +108,9 @@ jobs:
       - run: echo "native git diff — src changed, running build"
 
   # ──────────────────────────────────────────────
-  # Option 4 — GitHub CLI (gh pr diff --name-only)
-  #   Pattern from github/azure-config
-  #   Pros: no checkout needed, matches PR "Files changed" tab exactly
-  #   Cons: pull_request only (no merge_group/push), requires GITHUB_TOKEN
+  # Option 4 — gh pr diff --name-only
+  #   Pros: no checkout needed, matches PR "Files changed" tab
+  #   Cons: pull_request only (no merge_group/push)
   # ──────────────────────────────────────────────
   detect-gh-cli:
     if: github.event_name == 'pull_request'
@@ -137,17 +137,49 @@ jobs:
     if: needs.detect-gh-cli.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "gh cli — src changed, running build"
+      - run: echo "gh pr diff — src changed, running build"
 
   # ──────────────────────────────────────────────
-  # Required gate job pattern
+  # Option 5 — gh api REST endpoint (pulls/N/files)
+  #   Pros: no checkout, paginates automatically, returns per-file status
+  #   Cons: pull_request only (no merge_group/push)
+  # ──────────────────────────────────────────────
+  detect-gh-api:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.detect.outputs.relevant }}
+    steps:
+      - id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILE_PATTERN: '^(src/|package\.json$)'
+        run: |
+          changed=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          echo "$changed"
+          if echo "$changed" | grep -qE "$FILE_PATTERN"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-gh-api:
+    needs: detect-gh-api
+    if: needs.detect-gh-api.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "gh api pulls/N/files — src changed, running build"
+
+  # ──────────────────────────────────────────────
+  # Required gate job (pattern from github/github)
   #   This is the ONLY job marked as required in branch protection.
   #   Uses if: always() so it runs even when build jobs are skipped.
   #   Skipped jobs report "success" to needs, so we check explicitly.
   # ──────────────────────────────────────────────
   required-gate:
     runs-on: ubuntu-latest
-    needs: [detect-dorny, build-dorny, detect-tj, build-tj, detect-native, build-native, detect-gh-cli, build-gh-cli]
+    needs: [detect-dorny, build-dorny, detect-tj, build-tj, detect-native, build-native, detect-gh-cli, build-gh-cli, detect-gh-api, build-gh-api]
     if: always()
     steps:
       - run: |
@@ -155,18 +187,21 @@ jobs:
           echo "tj      — src=${{ needs.detect-tj.outputs.src_changed }}, build=${{ needs.build-tj.result }}"
           echo "native  — src=${{ needs.detect-native.outputs.relevant }}, build=${{ needs.build-native.result }}"
           echo "gh-cli  — src=${{ needs.detect-gh-cli.outputs.relevant }}, build=${{ needs.build-gh-cli.result }}"
+          echo "gh-api  — src=${{ needs.detect-gh-api.outputs.relevant }}, build=${{ needs.build-gh-api.result }}"
 
-          # Fail if any build ran and didn't succeed (skipped is OK)
+          # Fail if any job failed or was cancelled (skipped is OK)
           failed=false
           for result in \
+            "${{ needs.detect-dorny.result }}" \
+            "${{ needs.detect-tj.result }}" \
+            "${{ needs.detect-native.result }}" \
+            "${{ needs.detect-gh-cli.result }}" \
+            "${{ needs.detect-gh-api.result }}" \
             "${{ needs.build-dorny.result }}" \
             "${{ needs.build-tj.result }}" \
             "${{ needs.build-native.result }}" \
             "${{ needs.build-gh-cli.result }}" \
-            "${{ needs.detect-dorny.result }}" \
-            "${{ needs.detect-tj.result }}" \
-            "${{ needs.detect-native.result }}" \
-            "${{ needs.detect-gh-cli.result }}"; do
+            "${{ needs.build-gh-api.result }}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               failed=true
             fi
