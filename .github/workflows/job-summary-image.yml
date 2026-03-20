@@ -6,7 +6,7 @@ on:
 
 jobs:
   github-script:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/github-script@v6
         with:
@@ -15,7 +15,7 @@ jobs:
               .addImage('https://octodex.github.com/images/minion.png', 'GitHub Octocat Minion', {width: '200', height: '200'})
               .write();
   upload-image:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
     steps:

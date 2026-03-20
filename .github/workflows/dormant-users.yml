@@ -2,7 +2,7 @@ on: workflow_dispatch
 
 jobs:
   report:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Analyze User Activity
         id: analyze_user_activity

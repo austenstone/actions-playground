@@ -1,0 +1,207 @@
+name: Windows ARM Server Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-windows-server:
+    runs-on: Windows-ARM64
+    steps:
+      - name: Check Windows Version
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          $caption = $os.Caption
+
+          Write-Host "OS: $caption"
+
+          if ($caption -like "*Windows Server*") {
+            Write-Host "Confirmed: Windows Server detected"
+          } else {
+            Write-Host "Error: This is not Windows Server"
+            exit 1
+          }
+
+          if ($caption -like "*Windows 11*") {
+            Write-Host "Error: Windows 11 detected (not allowed)"
+            exit 1
+          }
+
+          Write-Host "All checks passed!"
+
+      - name: Operating System Details
+        run: |
+          Write-Host "=== OS INFO ==="
+          $os = Get-CimInstance Win32_OperatingSystem
+          Write-Host "Caption:        $($os.Caption)"
+          Write-Host "Version:        $($os.Version)"
+          Write-Host "Build:          $($os.BuildNumber)"
+          Write-Host "Architecture:   $($os.OSArchitecture)"
+          Write-Host "Install Date:   $($os.InstallDate)"
+          Write-Host "Last Boot:      $($os.LastBootUpTime)"
+          Write-Host "Serial Number:  $($os.SerialNumber)"
+          Write-Host "Locale:         $($os.Locale)"
+          Write-Host "System Dir:     $($os.SystemDirectory)"
+          Write-Host "Windows Dir:    $($os.WindowsDirectory)"
+
+      - name: CPU Details
+        run: |
+          Write-Host "=== CPU INFO ==="
+          $cpu = Get-CimInstance Win32_Processor
+          Write-Host "Name:              $($cpu.Name)"
+          Write-Host "Manufacturer:      $($cpu.Manufacturer)"
+          Write-Host "Architecture:      $($cpu.Architecture)"
+          Write-Host "Cores:             $($cpu.NumberOfCores)"
+          Write-Host "Logical Procs:     $($cpu.NumberOfLogicalProcessors)"
+          Write-Host "Max Clock (MHz):   $($cpu.MaxClockSpeed)"
+          Write-Host "Current Clock:     $($cpu.CurrentClockSpeed)"
+          Write-Host "L2 Cache (KB):     $($cpu.L2CacheSize)"
+          Write-Host "L3 Cache (KB):     $($cpu.L3CacheSize)"
+          Write-Host "Socket:            $($cpu.SocketDesignation)"
+          Write-Host "Status:            $($cpu.Status)"
+          Write-Host "Virtualization:    $($cpu.VirtualizationFirmwareEnabled)"
+
+      - name: Memory Details
+        run: |
+          Write-Host "=== MEMORY INFO ==="
+          $os = Get-CimInstance Win32_OperatingSystem
+          $totalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+          $freeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
+          $usedGB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2)
+          Write-Host "Total RAM:     ${totalGB} GB"
+          Write-Host "Free RAM:      ${freeGB} GB"
+          Write-Host "Used RAM:      ${usedGB} GB"
+
+          Write-Host "`n--- Physical DIMMs ---"
+          Get-CimInstance Win32_PhysicalMemory | ForEach-Object {
+            $capGB = [math]::Round($_.Capacity / 1GB, 2)
+            Write-Host "  Slot: $($_.DeviceLocator) | ${capGB} GB | Speed: $($_.Speed) MHz | Type: $($_.SMBIOSMemoryType)"
+          }
+
+      - name: Disk Details
+        run: |
+          Write-Host "=== DISK INFO ==="
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
+            $totalGB = [math]::Round($_.Size / 1GB, 2)
+            $freeGB = [math]::Round($_.FreeSpace / 1GB, 2)
+            $usedGB = [math]::Round(($_.Size - $_.FreeSpace) / 1GB, 2)
+            $pctFree = [math]::Round(($_.FreeSpace / $_.Size) * 100, 1)
+            Write-Host "Drive $($_.DeviceID) | Total: ${totalGB} GB | Used: ${usedGB} GB | Free: ${freeGB} GB (${pctFree}%)"
+          }
+
+          Write-Host "`n--- Physical Disks ---"
+          Get-PhysicalDisk | ForEach-Object {
+            $sizeGB = [math]::Round($_.Size / 1GB, 2)
+            Write-Host "  $($_.FriendlyName) | ${sizeGB} GB | Media: $($_.MediaType) | Bus: $($_.BusType) | Health: $($_.HealthStatus)"
+          }
+
+      - name: Network Details
+        run: |
+          Write-Host "=== NETWORK INFO ==="
+          Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
+            Write-Host "Adapter:    $($_.Name)"
+            Write-Host "  Desc:     $($_.InterfaceDescription)"
+            Write-Host "  MAC:      $($_.MacAddress)"
+            Write-Host "  Speed:    $($_.LinkSpeed)"
+            Write-Host "  Status:   $($_.Status)"
+          }
+
+          Write-Host "`n--- IP Configuration ---"
+          Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne '127.0.0.1' } | ForEach-Object {
+            Write-Host "  Interface: $($_.InterfaceAlias) | IP: $($_.IPAddress)/$($_.PrefixLength)"
+          }
+
+          Write-Host "`n--- DNS Servers ---"
+          Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object ServerAddresses | ForEach-Object {
+            Write-Host "  $($_.InterfaceAlias): $($_.ServerAddresses -join ', ')"
+          }
+
+      - name: Environment & Runtime Details
+        run: |
+          Write-Host "=== ENVIRONMENT ==="
+          Write-Host "Computer Name:  $env:COMPUTERNAME"
+          Write-Host "User:           $env:USERNAME"
+          Write-Host "User Domain:    $env:USERDOMAIN"
+          Write-Host "Temp Path:      $env:TEMP"
+          Write-Host "Processor Arch: $env:PROCESSOR_ARCHITECTURE"
+          Write-Host "Num of Procs:   $env:NUMBER_OF_PROCESSORS"
+          Write-Host "System Root:    $env:SystemRoot"
+
+          Write-Host "`n--- PowerShell ---"
+          Write-Host "PS Version:     $($PSVersionTable.PSVersion)"
+          Write-Host "PS Edition:     $($PSVersionTable.PSEdition)"
+          Write-Host "CLR Version:    $($PSVersionTable.CLRVersion)"
+          Write-Host "OS:             $($PSVersionTable.OS)"
+
+          Write-Host "`n--- .NET Runtime ---"
+          dotnet --list-runtimes 2>$null || Write-Host "  dotnet not found"
+
+          Write-Host "`n--- .NET SDKs ---"
+          dotnet --list-sdks 2>$null || Write-Host "  dotnet SDK not found"
+
+      - name: Installed Software (Key Tools)
+        run: |
+          Write-Host "=== KEY SOFTWARE ==="
+          $tools = @(
+            @{ Name = "git";        Cmd = "git --version" },
+            @{ Name = "node";       Cmd = "node --version" },
+            @{ Name = "npm";        Cmd = "npm --version" },
+            @{ Name = "python";     Cmd = "python --version" },
+            @{ Name = "pip";        Cmd = "pip --version" },
+            @{ Name = "java";       Cmd = "java -version 2>&1 | Select-Object -First 1" },
+            @{ Name = "docker";     Cmd = "docker --version" },
+            @{ Name = "az";         Cmd = "az --version 2>&1 | Select-Object -First 1" },
+            @{ Name = "aws";        Cmd = "aws --version" },
+            @{ Name = "terraform";  Cmd = "terraform --version 2>&1 | Select-Object -First 1" },
+            @{ Name = "kubectl";    Cmd = "kubectl version --client --short 2>&1 | Select-Object -First 1" },
+            @{ Name = "helm";       Cmd = "helm version --short" },
+            @{ Name = "cmake";      Cmd = "cmake --version 2>&1 | Select-Object -First 1" },
+            @{ Name = "msbuild";    Cmd = "msbuild -version 2>&1 | Select-Object -Last 1" },
+            @{ Name = "nuget";      Cmd = "nuget help 2>&1 | Select-Object -First 1" },
+            @{ Name = "choco";      Cmd = "choco --version" },
+            @{ Name = "curl";       Cmd = "curl --version 2>&1 | Select-Object -First 1" },
+            @{ Name = "7z";         Cmd = "7z 2>&1 | Select-Object -First 1" }
+          )
+
+          foreach ($tool in $tools) {
+            try {
+              $result = Invoke-Expression $tool.Cmd 2>$null
+              if ($result) {
+                Write-Host "$($tool.Name.PadRight(12)) : $result"
+              } else {
+                Write-Host "$($tool.Name.PadRight(12)) : not found"
+              }
+            } catch {
+              Write-Host "$($tool.Name.PadRight(12)) : not found"
+            }
+          }
+
+      - name: Windows Features & Services
+        run: |
+          Write-Host "=== WINDOWS FEATURES (Enabled) ==="
+          Get-WindowsFeature 2>$null | Where-Object Installed | Select-Object -ExpandProperty Name | ForEach-Object { Write-Host "  $_" }
+
+          Write-Host "`n=== RUNNING SERVICES (Top 30) ==="
+          Get-Service -ErrorAction SilentlyContinue | Where-Object Status -eq 'Running' | Select-Object -First 30 | ForEach-Object {
+            Write-Host "  $($_.Name.PadRight(30)) $($_.DisplayName)"
+          }
+
+      - name: GPU & Display
+        run: |
+          Write-Host "=== GPU INFO ==="
+          Get-CimInstance Win32_VideoController | ForEach-Object {
+            Write-Host "Name:       $($_.Name)"
+            Write-Host "Adapter RAM: $([math]::Round($_.AdapterRAM / 1GB, 2)) GB"
+            Write-Host "Driver Ver:  $($_.DriverVersion)"
+            Write-Host "Status:      $($_.Status)"
+          }
+
+      - name: PATH & Environment Variables
+        run: |
+          Write-Host "=== PATH ENTRIES ==="
+          $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+
+          Write-Host "`n=== GITHUB ENVIRONMENT VARIABLES ==="
+          Get-ChildItem env: | Where-Object { $_.Name -like "GITHUB_*" -or $_.Name -like "RUNNER_*" } |
+            Sort-Object Name | ForEach-Object {
+              Write-Host "  $($_.Name.PadRight(35)) = $($_.Value)"
+            }
