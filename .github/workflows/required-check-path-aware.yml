@@ -12,7 +12,6 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 1 — dorny/paths-filter (3k+ stars)
-  #   Used by github/copilot-api, 20+ github-org repos
   #   Pros: YAML filter syntax, multiple named filter groups
   #   Cons: third-party action
   # ──────────────────────────────────────────────
@@ -44,7 +43,6 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 2 — tj-actions/changed-files (2.6k+ stars)
-  #   Used by github/docs (78+ github-org repos)
   #   Pros: rich outputs (added/modified/deleted), glob patterns
   #   Cons: third-party action
   # ──────────────────────────────────────────────
@@ -72,7 +70,6 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Option 3 — Native git diff (no third-party actions)
-  #   Used across 130+ github-org workflows
   #   Pros: zero dependencies, full control
   #   Cons: manual regex, no glob syntax
   # ──────────────────────────────────────────────
