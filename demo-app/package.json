@@ -23,7 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.0",
-    "eslint": "^8.57.1",
+    "eslint": "^10.1.0",
     "vitest": "^4.1.0"
   },
   "dependencies": {
