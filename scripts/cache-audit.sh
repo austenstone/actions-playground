@@ -20,7 +20,9 @@ set -euo pipefail
 REPORT="cache-audit-report.md"
 
 human_size() {
-  local bytes=$1
+  local bytes
+  bytes=$(echo "$1" | tr -d '[:space:]')
+  bytes=${bytes:-0}
   if (( bytes >= 1073741824 )); then
     printf "%.2f GB" "$(echo "scale=2; $bytes / 1073741824" | bc)"
   elif (( bytes >= 1048576 )); then
@@ -40,8 +42,8 @@ echo "" >> "$REPORT"
 # ---------- Org-level cache usage ----------
 echo "::group::Fetching org-level cache usage"
 org_usage=$(gh api "/orgs/${ORG}/actions/cache/usage" 2>/dev/null || echo '{}')
-total_size=$(echo "$org_usage" | jq -r '.total_active_caches_size_in_bytes // 0')
-total_count=$(echo "$org_usage" | jq -r '.total_active_caches_count // 0')
+total_size=$(echo "$org_usage" | jq -r '.total_active_caches_size_in_bytes // 0' | tr -d '[:space:]')
+total_count=$(echo "$org_usage" | jq -r '.total_active_caches_count // 0' | tr -d '[:space:]')
 echo "Total caches: $total_count, Total size: $total_size bytes"
 echo "::endgroup::"
 
