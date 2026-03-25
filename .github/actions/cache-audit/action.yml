@@ -74,9 +74,15 @@ runs:
 
         # Org-level cache usage
         echo "::group::Fetching org-level cache usage"
-        org_usage=$(gh api "/orgs/${ORG}/actions/cache/usage" 2>/dev/null || echo '{}')
-        total_size=$(echo "$org_usage" | jq -r '.total_active_caches_size_in_bytes // 0' | tr -d '[:space:]')
-        total_count=$(echo "$org_usage" | jq -r '.total_active_caches_count // 0' | tr -d '[:space:]')
+        org_usage=$(gh api "/orgs/${ORG}/actions/cache/usage" 2>&1 || true)
+        if echo "$org_usage" | jq -e '.total_active_caches_size_in_bytes' > /dev/null 2>&1; then
+          total_size=$(echo "$org_usage" | jq -r '.total_active_caches_size_in_bytes // 0' | tr -d '[:space:]')
+          total_count=$(echo "$org_usage" | jq -r '.total_active_caches_count // 0' | tr -d '[:space:]')
+        else
+          echo "::warning::Could not fetch org-level cache usage (check token permissions). Continuing with per-repo data."
+          total_size=0
+          total_count=0
+        fi
         echo "Total caches: $total_count, Total size: $total_size bytes"
         echo "::endgroup::"
 
@@ -96,12 +102,25 @@ runs:
         # Per-repo cache usage
         echo "::group::Fetching per-repo cache usage"
         repos_json=$(gh api --paginate "/orgs/${ORG}/actions/cache/usage-by-repository" \
-          --jq '.repository_cache_usages' 2>/dev/null | jq -s 'add // []')
+          --jq '.repository_cache_usages' 2>&1 | jq -s 'add // []' 2>/dev/null || echo '[]')
 
-        repo_count=$(echo "$repos_json" | jq 'length')
+        repo_count=$(echo "$repos_json" | jq 'length' | tr -d '[:space:]')
+        repo_count=${repo_count:-0}
         echo "Found ${repo_count} repos with cache usage"
         echo "::endgroup::"
         echo "repo_count=${repo_count}" >> "$GITHUB_OUTPUT"
+
+        if [[ "$repo_count" -eq 0 ]]; then
+          echo "::warning::No repos with cache usage found. The token may lack org-level permissions. Try using a PAT with \`admin:org\` scope."
+          echo "_No repos with cache data found. Ensure the token has org-level read access._" >> "$REPORT"
+
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "✅ Audit complete (0 repos found). Report: ${REPORT}"
+          exit 0
+        fi
 
         if [[ "$SORT_BY" == "count" ]]; then
           sort_key=".active_caches_count"
@@ -227,41 +246,37 @@ runs:
         # Recommendations
         echo "## 💡 Recommendations" >> "$REPORT"
         echo "" >> "$REPORT"
-        cat >> "$REPORT" << 'RECS'
-        1. **Purge stale caches from merged branches.** Caches scoped to deleted branches are never reused. Use `gh cache delete` or the [gh-actions-cache](https://github.com/actions/gh-actions-cache) extension to clean them up.
-
-        2. **Set shorter retention.** Lower `ACTIONS_CACHE_MAX_RETENTION_DAYS` in org settings if you don't need 7+ days.
-
-        3. **Audit high-failure-rate repos.** Failed CI runs still write caches. A 50%+ failure rate means half your cache writes are waste.
-
-        4. **Avoid cache key collisions.** Use precise keys with lockfile hashes instead of overly broad restore keys.
-
-        5. **Use `actions/cache` v4+.** Better deduplication and performance.
-
-        6. **Schedule automated cleanup.** Run this audit weekly and pair it with a cleanup workflow.
-        RECS
+        echo "1. **Purge stale caches from merged branches.** Caches scoped to deleted branches are never reused. Use \`gh cache delete\` or the [gh-actions-cache](https://github.com/actions/gh-actions-cache) extension to clean them up." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "2. **Set shorter retention.** Lower \`ACTIONS_CACHE_MAX_RETENTION_DAYS\` in org settings if you don't need 7+ days." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "3. **Audit high-failure-rate repos.** Failed CI runs still write caches. A 50%+ failure rate means half your cache writes are waste." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "4. **Avoid cache key collisions.** Use precise keys with lockfile hashes instead of overly broad restore keys." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "5. **Use \`actions/cache\` v4+.** Better deduplication and performance." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "6. **Schedule automated cleanup.** Run this audit weekly and pair it with a cleanup workflow." >> "$REPORT"
 
         echo "" >> "$REPORT"
         echo "## 🛠️ Useful Commands" >> "$REPORT"
         echo "" >> "$REPORT"
-        cat >> "$REPORT" << 'CMDS'
-        ```bash
-        # List caches for a repo
-        gh cache list -R owner/repo
-
-        # Delete a specific cache by key
-        gh cache delete "cache-key" -R owner/repo
-
-        # Delete ALL caches for a repo
-        gh cache list -R owner/repo --json key -q '.[].key' | xargs -I {} gh cache delete {} -R owner/repo
-
-        # Org-level cache usage
-        gh api /orgs/{org}/actions/cache/usage
-
-        # Per-repo cache usage
-        gh api --paginate /orgs/{org}/actions/cache/usage-by-repository
-        ```
-        CMDS
+        echo '```bash' >> "$REPORT"
+        echo "# List caches for a repo" >> "$REPORT"
+        echo "gh cache list -R owner/repo" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Delete a specific cache by key" >> "$REPORT"
+        echo 'gh cache delete "cache-key" -R owner/repo' >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Delete ALL caches for a repo" >> "$REPORT"
+        echo "gh cache list -R owner/repo --json key -q '.[].key' | xargs -I {} gh cache delete {} -R owner/repo" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Org-level cache usage" >> "$REPORT"
+        echo "gh api /orgs/{org}/actions/cache/usage" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Per-repo cache usage" >> "$REPORT"
+        echo "gh api --paginate /orgs/{org}/actions/cache/usage-by-repository" >> "$REPORT"
+        echo '```' >> "$REPORT"
         echo "" >> "$REPORT"
 
         # Job Summary
