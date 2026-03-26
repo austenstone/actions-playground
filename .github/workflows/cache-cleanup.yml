@@ -1,0 +1,64 @@
+name: Cache Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Repository to clean (owner/repo)'
+        required: true
+        type: string
+      strategy:
+        description: 'Cleanup strategy'
+        required: true
+        default: 'stale-branches'
+        type: choice
+        options:
+          - stale-branches
+          - older-than-days
+          - all
+      days:
+        description: 'Delete caches not accessed in N days (only for older-than-days strategy)'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Dry run (list what would be deleted without deleting)'
+        required: false
+        default: true
+        type: boolean
+  # Auto-cleanup on PR close: delete caches scoped to the closed branch
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup-pr-caches:
+    name: Cleanup PR Branch Caches
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Cleanup caches for closed PR branch
+        uses: ./.github/actions/cache-cleanup
+        with:
+          repo: ${{ github.repository }}
+          strategy: stale-branches
+          dry_run: 'false'
+
+  cleanup-manual:
+    name: Manual Cache Cleanup
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run cleanup
+        uses: ./.github/actions/cache-cleanup
+        with:
+          repo: ${{ inputs.repo }}
+          strategy: ${{ inputs.strategy }}
+          days: ${{ inputs.days }}
+          dry_run: ${{ inputs.dry_run }}
