@@ -59,16 +59,17 @@ jobs:
           )
 
           # --- Helper: dispatch a child and return the run ID ---
+          # Only the final line (run ID) goes to stdout; everything else to stderr
           dispatch_child() {
             local job_name=$1 sleep_s=$2 fail_pct=$3
-            echo "🚀 Dispatching ${job_name} (sleep=${sleep_s}s, fail=${fail_pct}%)"
+            echo "🚀 Dispatching ${job_name} (sleep=${sleep_s}s, fail=${fail_pct}%)" >&2
             gh workflow run job-restart-child.yml \
               --ref "${REF}" \
               -f "job-name=${job_name}" \
               -f "sleep-seconds=${sleep_s}" \
               -f "fail-chance=${fail_pct}"
             sleep 3
-            # Grab the latest run ID for this workflow
+            # Grab the latest run ID for this workflow (only this goes to stdout)
             gh run list --workflow=job-restart-child.yml --limit=1 --json databaseId --jq '.[0].databaseId'
           }
 
