@@ -1,0 +1,137 @@
+name: Cache Cleanup
+description: Clean up stale GitHub Actions caches for a repository. Supports cleanup by stale branches, age, or delete all.
+author: austenstone
+
+inputs:
+  repo:
+    description: Repository to clean (owner/repo format)
+    required: true
+  strategy:
+    description: 'Cleanup strategy: stale-branches, older-than-days, or all'
+    required: false
+    default: stale-branches
+  days:
+    description: Delete caches not accessed in N days (only for older-than-days strategy)
+    required: false
+    default: '7'
+  dry_run:
+    description: List what would be deleted without actually deleting
+    required: false
+    default: 'true'
+  token:
+    description: GitHub token with actions write access to the target repo
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  deleted_count:
+    description: Number of caches deleted (0 if dry run)
+    value: ${{ steps.cleanup.outputs.deleted_count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run cache cleanup
+      id: cleanup
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_STRATEGY: ${{ inputs.strategy }}
+        INPUT_DAYS: ${{ inputs.days }}
+        INPUT_DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        set -euo pipefail
+
+        REPO="$INPUT_REPO"
+        STRATEGY="${INPUT_STRATEGY:-stale-branches}"
+        DAYS="${INPUT_DAYS:-7}"
+        DRY_RUN="${INPUT_DRY_RUN:-true}"
+        deleted_count=0
+
+        echo "## 🧹 Cache Cleanup — \`${REPO}\`" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "Strategy: **${STRATEGY}** | Dry run: **${DRY_RUN}**" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+
+        case "$STRATEGY" in
+          stale-branches)
+            echo "Checking for caches on branches that no longer exist..." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+
+            active_branches=$(gh api --paginate "/repos/${REPO}/branches" --jq '.[].name' | sort)
+
+            all_caches=$(gh api --paginate "/repos/${REPO}/actions/caches" \
+              --jq '.actions_caches' | jq -s 'add // []')
+
+            echo "$all_caches" | jq -r '.[].ref' | sort -u | while read -r ref; do
+              branch_name="${ref#refs/heads/}"
+              if [[ "$ref" == refs/pull/* ]]; then
+                continue
+              fi
+              if ! echo "$active_branches" | grep -qx "$branch_name"; then
+                ref_caches=$(echo "$all_caches" | jq --arg ref "$ref" '[.[] | select(.ref == $ref)]')
+                count=$(echo "$ref_caches" | jq 'length')
+
+                echo "Branch \`${branch_name}\` (deleted): ${count} caches" | tee -a "$GITHUB_STEP_SUMMARY"
+
+                if [[ "$DRY_RUN" != "true" ]]; then
+                  echo "$ref_caches" | jq -r '.[].key' | while read -r key; do
+                    gh cache delete "$key" -R "$REPO" 2>/dev/null || true
+                    deleted_count=$((deleted_count + 1))
+                  done
+                fi
+              fi
+            done
+            ;;
+
+          older-than-days)
+            echo "Deleting caches not accessed in the last ${DAYS} days..." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+
+            cutoff=$(date -u -d "${DAYS} days ago" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || \
+                     date -u -v-${DAYS}d '+%Y-%m-%dT%H:%M:%SZ')
+
+            all_caches=$(gh api --paginate "/repos/${REPO}/actions/caches" \
+              --jq '.actions_caches' | jq -s 'add // []')
+
+            echo "$all_caches" | jq -c --arg cutoff "$cutoff" \
+              '.[] | select(.last_accessed_at < $cutoff)' | while IFS= read -r cache; do
+              key=$(echo "$cache" | jq -r '.key')
+              last=$(echo "$cache" | jq -r '.last_accessed_at')
+
+              echo "- \`${key}\` (last used: ${last})" | tee -a "$GITHUB_STEP_SUMMARY"
+
+              if [[ "$DRY_RUN" != "true" ]]; then
+                gh cache delete "$key" -R "$REPO" 2>/dev/null || true
+                deleted_count=$((deleted_count + 1))
+              fi
+            done
+            ;;
+
+          all)
+            echo "⚠️ Deleting ALL caches..." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+              gh cache list -R "$REPO" --json key,sizeInBytes,ref,lastAccessedAt \
+                -q '.[] | "- `\(.key)` (\(.ref)) — \(.sizeInBytes) bytes, last used \(.lastAccessedAt)"' \
+                | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              gh cache list -R "$REPO" --json key -q '.[].key' | while read -r key; do
+                echo "Deleting \`${key}\`" | tee -a "$GITHUB_STEP_SUMMARY"
+                gh cache delete "$key" -R "$REPO" 2>/dev/null || true
+                deleted_count=$((deleted_count + 1))
+              done
+            fi
+            ;;
+        esac
+
+        echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+        if [[ "$DRY_RUN" == "true" ]]; then
+          echo "🔍 **Dry run complete.** No caches were deleted. Re-run with dry_run=false to execute." | tee -a "$GITHUB_STEP_SUMMARY"
+        else
+          echo "✅ **Cleanup complete.** Deleted ${deleted_count} caches." | tee -a "$GITHUB_STEP_SUMMARY"
+        fi
+
+        echo "deleted_count=${deleted_count}" >> "$GITHUB_OUTPUT"

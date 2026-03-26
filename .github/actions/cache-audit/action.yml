@@ -1,0 +1,287 @@
+name: Cache Audit
+description: Audit GitHub Actions cache usage across an organization. Produces a markdown report with per-repo breakdowns, branch/key analysis, and recommendations.
+author: austenstone
+
+inputs:
+  org:
+    description: GitHub organization slug to audit
+    required: true
+  top_n:
+    description: Number of top repos to show detailed cache breakdown for
+    required: false
+    default: '10'
+  sort_by:
+    description: Sort repos by "size" or "count"
+    required: false
+    default: size
+  token:
+    description: GitHub token with read access to org repos and actions
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  report_path:
+    description: Path to the generated markdown report
+    value: ${{ steps.audit.outputs.report_path }}
+  total_size:
+    description: Total cache size in bytes
+    value: ${{ steps.audit.outputs.total_size }}
+  total_count:
+    description: Total number of active caches
+    value: ${{ steps.audit.outputs.total_count }}
+  repo_count:
+    description: Number of repos with cache usage
+    value: ${{ steps.audit.outputs.repo_count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Audit org cache usage
+      id: audit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_ORG: ${{ inputs.org }}
+        INPUT_TOP_N: ${{ inputs.top_n }}
+        INPUT_SORT_BY: ${{ inputs.sort_by }}
+      run: |
+        set -euo pipefail
+
+        ORG="$INPUT_ORG"
+        TOP_N="${INPUT_TOP_N:-10}"
+        SORT_BY="${INPUT_SORT_BY:-size}"
+        REPORT="cache-audit-report.md"
+
+        human_size() {
+          local bytes
+          bytes=$(echo "$1" | tr -d '[:space:]')
+          bytes=${bytes:-0}
+          if (( bytes >= 1073741824 )); then
+            printf "%.2f GB" "$(echo "scale=2; $bytes / 1073741824" | bc)"
+          elif (( bytes >= 1048576 )); then
+            printf "%.2f MB" "$(echo "scale=2; $bytes / 1048576" | bc)"
+          elif (( bytes >= 1024 )); then
+            printf "%.2f KB" "$(echo "scale=2; $bytes / 1024" | bc)"
+          else
+            printf "%d B" "$bytes"
+          fi
+        }
+
+        echo "# 📦 Actions Cache Audit — \`${ORG}\`" > "$REPORT"
+        echo "" >> "$REPORT"
+        echo "> Generated on $(date -u '+%Y-%m-%d %H:%M UTC')" >> "$REPORT"
+        echo "" >> "$REPORT"
+
+        # Org-level cache usage
+        echo "::group::Fetching org-level cache usage"
+        org_usage=$(gh api "/orgs/${ORG}/actions/cache/usage" 2>&1 || true)
+        if echo "$org_usage" | jq -e '.total_active_caches_size_in_bytes' > /dev/null 2>&1; then
+          total_size=$(echo "$org_usage" | jq -r '.total_active_caches_size_in_bytes // 0' | tr -d '[:space:]')
+          total_count=$(echo "$org_usage" | jq -r '.total_active_caches_count // 0' | tr -d '[:space:]')
+        else
+          echo "::warning::Could not fetch org-level cache usage (check token permissions). Continuing with per-repo data."
+          total_size=0
+          total_count=0
+        fi
+        echo "Total caches: $total_count, Total size: $total_size bytes"
+        echo "::endgroup::"
+
+        echo "total_size=${total_size}" >> "$GITHUB_OUTPUT"
+        echo "total_count=${total_count}" >> "$GITHUB_OUTPUT"
+        echo "report_path=${REPORT}" >> "$GITHUB_OUTPUT"
+
+        echo "## Organization Summary" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "| Metric | Value |" >> "$REPORT"
+        echo "|--------|-------|" >> "$REPORT"
+        echo "| **Organization** | \`${ORG}\` |" >> "$REPORT"
+        echo "| **Total Cache Size** | $(human_size "$total_size") |" >> "$REPORT"
+        echo "| **Total Active Caches** | ${total_count} |" >> "$REPORT"
+        echo "" >> "$REPORT"
+
+        # Per-repo cache usage
+        echo "::group::Fetching per-repo cache usage"
+        repos_json=$(gh api --paginate "/orgs/${ORG}/actions/cache/usage-by-repository" \
+          --jq '.repository_cache_usages' 2>&1 | jq -s 'add // []' 2>/dev/null || echo '[]')
+
+        repo_count=$(echo "$repos_json" | jq 'length' | tr -d '[:space:]')
+        repo_count=${repo_count:-0}
+        echo "Found ${repo_count} repos with cache usage"
+        echo "::endgroup::"
+        echo "repo_count=${repo_count}" >> "$GITHUB_OUTPUT"
+
+        if [[ "$repo_count" -eq 0 ]]; then
+          echo "::warning::No repos with cache usage found. The token may lack org-level permissions. Try using a PAT with \`admin:org\` scope."
+          echo "_No repos with cache data found. Ensure the token has org-level read access._" >> "$REPORT"
+
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "✅ Audit complete (0 repos found). Report: ${REPORT}"
+          exit 0
+        fi
+
+        if [[ "$SORT_BY" == "count" ]]; then
+          sort_key=".active_caches_count"
+        else
+          sort_key=".active_caches_size_in_bytes"
+        fi
+
+        sorted_repos=$(echo "$repos_json" | jq --arg sk "$sort_key" "sort_by($sort_key) | reverse")
+
+        echo "## Top Repos by Cache ${SORT_BY^}" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "| # | Repository | Cache Count | Cache Size |" >> "$REPORT"
+        echo "|---|-----------|------------|-----------|" >> "$REPORT"
+
+        echo "$sorted_repos" | jq -c '.[]' | head -n 50 | {
+          rank=0
+          while IFS= read -r row; do
+            rank=$((rank + 1))
+            repo_name=$(echo "$row" | jq -r '.full_name')
+            cache_count=$(echo "$row" | jq -r '.active_caches_count')
+            cache_bytes=$(echo "$row" | jq -r '.active_caches_size_in_bytes')
+            echo "| ${rank} | \`${repo_name}\` | ${cache_count} | $(human_size "$cache_bytes") |" >> "$REPORT"
+          done
+        }
+        echo "" >> "$REPORT"
+
+        # Detailed cache breakdown for top N repos
+        echo "## Detailed Cache Breakdown (Top ${TOP_N} Repos)" >> "$REPORT"
+        echo "" >> "$REPORT"
+
+        echo "$sorted_repos" | jq -c '.[]' | head -n "$TOP_N" | {
+          while IFS= read -r row; do
+            repo_name=$(echo "$row" | jq -r '.full_name')
+            cache_count=$(echo "$row" | jq -r '.active_caches_count')
+            cache_bytes=$(echo "$row" | jq -r '.active_caches_size_in_bytes')
+
+            echo "### \`${repo_name}\` — ${cache_count} caches ($(human_size "$cache_bytes"))" >> "$REPORT"
+            echo "" >> "$REPORT"
+
+            echo "::group::Fetching caches for ${repo_name}"
+            caches=$(gh api --paginate "/repos/${repo_name}/actions/caches" \
+              --jq '.actions_caches' 2>/dev/null | jq -s 'add // []' | jq 'sort_by(.size_in_bytes) | reverse')
+
+            num_caches=$(echo "$caches" | jq 'length')
+            echo "  ${num_caches} caches found"
+            echo "::endgroup::"
+
+            if [[ "$num_caches" -eq 0 ]]; then
+              echo "_No caches found._" >> "$REPORT"
+              echo "" >> "$REPORT"
+              continue
+            fi
+
+            # Summary by ref (branch)
+            echo "**Cache by branch:**" >> "$REPORT"
+            echo "" >> "$REPORT"
+            echo "| Branch | Count | Size |" >> "$REPORT"
+            echo "|--------|-------|------|" >> "$REPORT"
+
+            echo "$caches" | jq -r '
+              group_by(.ref) |
+              map({
+                ref: .[0].ref,
+                count: length,
+                size: (map(.size_in_bytes) | add)
+              }) |
+              sort_by(.size) | reverse | .[] |
+              "\(.ref)\t\(.count)\t\(.size)"
+            ' | while IFS=$'\t' read -r ref count size; do
+              short_ref="${ref#refs/heads/}"
+              short_ref="${short_ref#refs/pull/}"
+              echo "| \`${short_ref}\` | ${count} | $(human_size "$size") |" >> "$REPORT"
+            done
+            echo "" >> "$REPORT"
+
+            # Summary by key prefix (cache type)
+            echo "**Cache by key prefix:**" >> "$REPORT"
+            echo "" >> "$REPORT"
+            echo "| Key Prefix | Count | Size |" >> "$REPORT"
+            echo "|-----------|-------|------|" >> "$REPORT"
+
+            echo "$caches" | jq -r '
+              map(.key | split("-") | .[0:3] | join("-")) as $prefixes |
+              [., $prefixes] | transpose |
+              group_by(.[1]) |
+              map({
+                prefix: .[0][1],
+                count: length,
+                size: (map(.[0].size_in_bytes) | add)
+              }) |
+              sort_by(.size) | reverse | .[] |
+              "\(.prefix)\t\(.count)\t\(.size)"
+            ' | while IFS=$'\t' read -r prefix count size; do
+              echo "| \`${prefix}\` | ${count} | $(human_size "$size") |" >> "$REPORT"
+            done
+            echo "" >> "$REPORT"
+
+            # Top 10 largest individual caches
+            echo "<details><summary>Top 10 largest caches</summary>" >> "$REPORT"
+            echo "" >> "$REPORT"
+            echo "| Key | Branch | Size | Last Used |" >> "$REPORT"
+            echo "|-----|--------|------|-----------|" >> "$REPORT"
+
+            echo "$caches" | jq -c '.[:10] | .[]' | while IFS= read -r cache; do
+              key=$(echo "$cache" | jq -r '.key')
+              ref=$(echo "$cache" | jq -r '.ref')
+              size=$(echo "$cache" | jq -r '.size_in_bytes')
+              last_used=$(echo "$cache" | jq -r '.last_accessed_at // "unknown"')
+              short_ref="${ref#refs/heads/}"
+              short_ref="${short_ref#refs/pull/}"
+              if [[ ${#key} -gt 60 ]]; then
+                key="${key:0:57}..."
+              fi
+              echo "| \`${key}\` | \`${short_ref}\` | $(human_size "$size") | ${last_used} |" >> "$REPORT"
+            done
+
+            echo "" >> "$REPORT"
+            echo "</details>" >> "$REPORT"
+            echo "" >> "$REPORT"
+          done
+        }
+
+        # Recommendations
+        echo "## 💡 Recommendations" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "1. **Purge stale caches from merged branches.** Caches scoped to deleted branches are never reused. Use \`gh cache delete\` or the [gh-actions-cache](https://github.com/actions/gh-actions-cache) extension to clean them up." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "2. **Set shorter retention.** Lower \`ACTIONS_CACHE_MAX_RETENTION_DAYS\` in org settings if you don't need 7+ days." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "3. **Audit high-failure-rate repos.** Failed CI runs still write caches. A 50%+ failure rate means half your cache writes are waste." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "4. **Avoid cache key collisions.** Use precise keys with lockfile hashes instead of overly broad restore keys." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "5. **Use \`actions/cache\` v4+.** Better deduplication and performance." >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "6. **Schedule automated cleanup.** Run this audit weekly and pair it with a cleanup workflow." >> "$REPORT"
+
+        echo "" >> "$REPORT"
+        echo "## 🛠️ Useful Commands" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo '```bash' >> "$REPORT"
+        echo "# List caches for a repo" >> "$REPORT"
+        echo "gh cache list -R owner/repo" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Delete a specific cache by key" >> "$REPORT"
+        echo 'gh cache delete "cache-key" -R owner/repo' >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Delete ALL caches for a repo" >> "$REPORT"
+        echo "gh cache list -R owner/repo --json key -q '.[].key' | xargs -I {} gh cache delete {} -R owner/repo" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Org-level cache usage" >> "$REPORT"
+        echo "gh api /orgs/{org}/actions/cache/usage" >> "$REPORT"
+        echo "" >> "$REPORT"
+        echo "# Per-repo cache usage" >> "$REPORT"
+        echo "gh api --paginate /orgs/{org}/actions/cache/usage-by-repository" >> "$REPORT"
+        echo '```' >> "$REPORT"
+        echo "" >> "$REPORT"
+
+        # Job Summary
+        if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        echo "✅ Audited ${repo_count} repos in org ${ORG}. Report: ${REPORT}"
