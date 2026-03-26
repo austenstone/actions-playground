@@ -18,7 +18,7 @@ jobs:
     with:
       username: ${{ github.actor }}
   run:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - run: gh workflow run reusable-called.yml --inputs username=octocat
         env:

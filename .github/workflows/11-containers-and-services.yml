@@ -15,7 +15,7 @@ jobs:
   # Basic Container Usage
   basic-container:
     name: Run Job in Container
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     container:
       image: node:20-bookworm-slim
@@ -29,7 +29,7 @@ jobs:
 
   container-with-options:
     name: Container with Options
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     container:
       image: node:20
@@ -48,7 +48,7 @@ jobs:
   # Service Containers - Databases
   redis-service:
     name: Redis Service
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     container: node:20-bookworm-slim
     
     services:
@@ -73,7 +73,7 @@ jobs:
 
   postgres-service:
     name: PostgreSQL Service
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     services:
       postgres:
@@ -107,7 +107,7 @@ jobs:
   # Multiple Services
   multi-services:
     name: Multiple Services
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     container: node:20-bookworm-slim
     
     services:
@@ -143,7 +143,7 @@ jobs:
   # Networking Differences
   networking-container:
     name: Container Networking
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     container: ubuntu:22.04
     
     services:
@@ -170,7 +170,7 @@ jobs:
 
   networking-runner:
     name: Runner Networking
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     services:
       redis:
@@ -199,7 +199,7 @@ jobs:
   # Integration Test Example
   integration-test:
     name: Integration Test with Database
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     container: node:20-bookworm-slim
     
     services:
@@ -250,7 +250,7 @@ jobs:
   # Health Checks
   health-checks:
     name: Service Health Checks
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     services:
       # Service with health check (recommended)

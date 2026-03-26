@@ -8,7 +8,7 @@ on:
 
 jobs:
   merge:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     if: |
       github.event.label.name == 'Merge' ||
       github.event.label.name == 'merge'

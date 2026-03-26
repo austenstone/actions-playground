@@ -2,6 +2,6 @@ on: [push, workflow_dispatch]
 
 jobs:
   test-runner:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - run: echo "Hello World"

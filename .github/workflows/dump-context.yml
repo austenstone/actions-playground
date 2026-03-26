@@ -5,7 +5,7 @@ jobs:
   dump_contexts_to_log:
     strategy:
       matrix:
-        os: [blacksmith-4vcpu-ubuntu-2404]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Dump GitHub context
