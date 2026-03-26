@@ -264,12 +264,17 @@ jobs:
   # Uses strategy.matrix with attempt: [1, 2, 3] and max-parallel: 1.
   # Attempt 1 always runs. If it succeeds, it uploads a success marker artifact.
   # Attempts 2+ check for the marker and skip if found.
+  #
+  # Trade-off: we use continue-on-error so early attempt failures don't
+  # mark the workflow as failed. A final "verdict" job checks the marker
+  # to determine the real outcome.
   # ---------------------------------------------------------------------------
   s4-matrix-retry:
     name: "S4 · Attempt ${{ matrix.attempt }}"
     if: inputs.strategy == 'matrix-retry'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    continue-on-error: true
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -320,6 +325,33 @@ jobs:
           path: /tmp/marker
           retention-days: 1
           overwrite: true
+
+  s4-verdict:
+    name: "S4 · Verdict"
+    if: inputs.strategy == 'matrix-retry' && always()
+    needs: [s4-matrix-retry]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check if any attempt succeeded
+        id: check
+        uses: actions/download-artifact@v4
+        with:
+          name: success-marker
+          path: /tmp/marker
+        continue-on-error: true
+
+      - name: Report result
+        env:
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "${CHECK_OUTCOME}" = "success" ]; then
+            echo "✅ At least one matrix attempt succeeded!"
+          else
+            echo "💥 All matrix attempts failed!"
+            exit 1
+          fi
 
   # ---------------------------------------------------------------------------
   # STRATEGY 5: Watcher Rerun Workflow
