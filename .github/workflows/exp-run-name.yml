@@ -1,0 +1,125 @@
+# Dynamic Workflow Run Names
+# GitHub Community Discussion: https://github.com/community/community/discussions/11396
+#
+# The `run-name` key customizes the display name of each workflow run in the UI.
+# It supports expressions, so you can build contextual names based on event type,
+# inputs, actor, branch, PR info, etc. This makes it WAY easier to find specific
+# runs in the Actions tab instead of seeing 50 identical "CI" entries.
+#
+# Ternary expressions let you handle multiple event types in a single run-name.
+
+name: "Dynamic Run Names"
+
+run-name: >-
+  ${{
+    github.event_name == 'workflow_dispatch'
+      && format('Deploy {0} v{1} by @{2}{3}',
+           inputs.environment,
+           inputs.version,
+           github.actor,
+           inputs.dry_run == true && ' [DRY RUN]' || '')
+    || github.event_name == 'pull_request'
+      && format('PR #{0}: {1}',
+           github.event.pull_request.number,
+           github.event.pull_request.title)
+    || github.event_name == 'push'
+      && format('Push to {0}: {1}',
+           github.ref_name,
+           github.event.head_commit.message)
+    || 'Workflow Run'
+  }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target deployment environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      version:
+        description: "Version to deploy (e.g. 1.2.3)"
+        required: true
+        type: string
+        default: "0.0.0"
+      dry_run:
+        description: "Dry run (no actual deployment)"
+        required: false
+        type: boolean
+        default: false
+      notify:
+        description: "Send Slack notification on completion"
+        required: false
+        type: boolean
+        default: true
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+  push:
+    branches: [main, develop]
+
+jobs:
+  info:
+    name: "Run Info"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display run context
+        run: |
+          echo "## Workflow Run Context" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Event** | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ref** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **SHA** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Run Name** | ${{ github.run_name || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Display dispatch inputs
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Dispatch Inputs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Input | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dry Run** | \`${{ inputs.dry_run }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Notify** | \`${{ inputs.notify }}\` |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Display PR info
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Request" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Number** | #${{ github.event.pull_request.number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Title** | ${{ github.event.pull_request.title }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Author** | @${{ github.event.pull_request.user.login }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Base** | \`${{ github.event.pull_request.base.ref }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Head** | \`${{ github.event.pull_request.head.ref }}\` |" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: "Deploy"
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Deploy
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "🏜️ DRY RUN — skipping actual deployment"
+            echo "Would deploy v${{ inputs.version }} to ${{ inputs.environment }}"
+          else
+            echo "🚀 Deploying v${{ inputs.version }} to ${{ inputs.environment }}..."
+            # actual deploy logic here
+          fi

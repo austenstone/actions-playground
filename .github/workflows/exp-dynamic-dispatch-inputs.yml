@@ -1,0 +1,216 @@
+# Dynamic / Interactive workflow_dispatch Inputs
+# GitHub Community Discussions:
+#   - https://github.com/community/community/discussions/140807 (dynamic choice lists)
+#   - https://github.com/community/community/discussions/158551 (dependent inputs)
+#
+# LIMITATIONS (as of March 2026):
+#   - Choice options are STATIC — defined in YAML at commit time, not dynamically populated
+#   - No dependent/cascading inputs (selecting "aws" doesn't filter region choices)
+#   - No input validation beyond type checking (no regex, min/max on strings, etc.)
+#   - No grouped or collapsible input sections
+#
+# WORKAROUND for dynamic values:
+#   Use `gh workflow run` with computed values from a script:
+#
+#     LATEST_TAG=$(gh api repos/:owner/:repo/tags --jq '.[0].name')
+#     gh workflow run deploy.yml \
+#       -f environment=production \
+#       -f version="$LATEST_TAG" \
+#       -f dry_run=false
+#
+#   This lets you compute values at dispatch time instead of hardcoding them.
+
+name: "Deploy Application"
+
+run-name: "Deploy v${{ inputs.version }} → ${{ inputs.environment }} by @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      # STRING — free-text input
+      version:
+        description: "Version to deploy (semver, e.g. 1.2.3)"
+        required: true
+        type: string
+        default: "latest"
+
+      # CHOICE — static dropdown (the big limitation)
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+      # ENVIRONMENT — pulls from repo's configured environments
+      # This gives you environment protection rules (approvals, wait timers, etc.)
+      target_environment:
+        description: "GitHub Environment (for protection rules)"
+        required: true
+        type: environment
+
+      # CHOICE — deployment region
+      region:
+        description: "Deployment region"
+        required: false
+        type: choice
+        default: "us-east-1"
+        options:
+          - us-east-1
+          - us-west-2
+          - eu-west-1
+          - ap-southeast-1
+
+      # BOOLEAN — toggle flags
+      dry_run:
+        description: "Dry run (simulate deployment without changes)"
+        required: false
+        type: boolean
+        default: false
+
+      skip_tests:
+        description: "Skip test suite"
+        required: false
+        type: boolean
+        default: false
+
+      # NUMBER — numeric input (GitHub validates it's a number)
+      replicas:
+        description: "Number of replicas"
+        required: false
+        type: number
+        default: 2
+
+      # STRING — optional extra config
+      extra_args:
+        description: "Additional deploy arguments (optional)"
+        required: false
+        type: string
+
+jobs:
+  # ── Validate Inputs ─────────────────────────────────────────────
+  validate:
+    name: "Validate Inputs"
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.check.outputs.valid }}
+    steps:
+      - name: Validate inputs
+        id: check
+        run: |
+          ERRORS=()
+
+          # Validate semver format (loose check)
+          if [[ "${{ inputs.version }}" != "latest" ]]; then
+            if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+              ERRORS+=("❌ Invalid version format: '${{ inputs.version }}' — expected semver (e.g. 1.2.3)")
+            fi
+          fi
+
+          # Validate replicas range
+          if [[ "${{ inputs.replicas }}" -lt 1 || "${{ inputs.replicas }}" -gt 10 ]]; then
+            ERRORS+=("❌ Replicas must be between 1 and 10, got ${{ inputs.replicas }}")
+          fi
+
+          # Warn on production without dry run
+          if [[ "${{ inputs.environment }}" == "production" && "${{ inputs.dry_run }}" == "false" ]]; then
+            echo "::warning::⚠️ Production deployment WITHOUT dry run — proceed with caution"
+          fi
+
+          # Warn on skipping tests for production
+          if [[ "${{ inputs.environment }}" == "production" && "${{ inputs.skip_tests }}" == "true" ]]; then
+            ERRORS+=("❌ Cannot skip tests for production deployments")
+          fi
+
+          if [[ ${#ERRORS[@]} -gt 0 ]]; then
+            echo "## ❌ Input Validation Failed" >> $GITHUB_STEP_SUMMARY
+            for err in "${ERRORS[@]}"; do
+              echo "- $err" >> $GITHUB_STEP_SUMMARY
+              echo "::error::$err"
+            done
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "## ✅ Inputs Validated" >> $GITHUB_STEP_SUMMARY
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+  # ── Run Tests (conditional) ─────────────────────────────────────
+  test:
+    name: "Test"
+    needs: validate
+    if: inputs.skip_tests == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running test suite..."
+          echo "Target: ${{ inputs.environment }} (${{ inputs.region }})"
+          # npm test or whatever your test command is
+
+  # ── Deploy ──────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy to ${{ inputs.environment }}"
+    needs: [validate, test]
+    # Run even if tests were skipped (skip_tests=true makes test job skip entirely)
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Region** | \`${{ inputs.region }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Replicas** | \`${{ inputs.replicas }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dry Run** | \`${{ inputs.dry_run }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tests Skipped** | \`${{ inputs.skip_tests }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Extra Args** | \`${{ inputs.extra_args || 'none' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deploy (dry run)
+        if: inputs.dry_run == true
+        run: |
+          echo "🏜️ DRY RUN — simulating deployment"
+          echo "Would deploy v${{ inputs.version }} to ${{ inputs.environment }} (${{ inputs.region }})"
+          echo "Replicas: ${{ inputs.replicas }}"
+          echo "Extra args: ${{ inputs.extra_args }}"
+
+      - name: Deploy (live)
+        if: inputs.dry_run == false
+        run: |
+          echo "🚀 Deploying v${{ inputs.version }} to ${{ inputs.environment }} (${{ inputs.region }})"
+          echo "Replicas: ${{ inputs.replicas }}"
+          # Actual deploy commands here
+          # e.g., kubectl set image deployment/app app=myapp:${{ inputs.version }}
+          #        --replicas=${{ inputs.replicas }}
+
+  # ── Notify ──────────────────────────────────────────────────────
+  notify:
+    name: "Notify"
+    needs: deploy
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post result
+        run: |
+          STATUS="${{ needs.deploy.result }}"
+          if [[ "$STATUS" == "success" ]]; then
+            echo "✅ Deployment succeeded: v${{ inputs.version }} → ${{ inputs.environment }}"
+          else
+            echo "❌ Deployment failed: v${{ inputs.version }} → ${{ inputs.environment }}"
+          fi
+          # Slack/Teams webhook, gh issue comment, etc.

@@ -1,0 +1,95 @@
+# Dynamic Matrix Generation Pattern
+# Reference: https://github.com/orgs/community/discussions/25622
+#
+# Instead of hardcoding matrix values, generate them dynamically from a prior job's output.
+# This enables data-driven CI: read configs from files, filter by event context, or compute
+# the matrix at runtime. The key trick is fromJSON() on the matrix property.
+
+name: "Exp: Dynamic Matrix"
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "Which matrix scope to run"
+        type: choice
+        options:
+          - all
+          - linux-only
+          - latest-only
+        default: all
+
+jobs:
+  setup:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Generate matrix based on input scope
+        id: set-matrix
+        run: |
+          case "${{ inputs.scope }}" in
+            linux-only)
+              # Only Linux runners, all Node versions
+              MATRIX='[
+                {"os": "ubuntu-latest", "node": 18},
+                {"os": "ubuntu-latest", "node": 20},
+                {"os": "ubuntu-latest", "node": 22}
+              ]'
+              ;;
+            latest-only)
+              # All OSes, only latest Node
+              MATRIX='[
+                {"os": "ubuntu-latest",  "node": 22},
+                {"os": "windows-latest", "node": 22},
+                {"os": "macos-latest",   "node": 22}
+              ]'
+              ;;
+            *)
+              # Full matrix
+              MATRIX='[
+                {"os": "ubuntu-latest",  "node": 18},
+                {"os": "ubuntu-latest",  "node": 20},
+                {"os": "ubuntu-latest",  "node": 22},
+                {"os": "windows-latest", "node": 20},
+                {"os": "windows-latest", "node": 22},
+                {"os": "macos-latest",   "node": 20},
+                {"os": "macos-latest",   "node": 22}
+              ]'
+              ;;
+          esac
+
+          # Compact to single line for the output
+          echo "matrix=$(echo "$MATRIX" | jq -c .)" >> "$GITHUB_OUTPUT"
+
+      - name: Debug matrix
+        run: echo '${{ steps.set-matrix.outputs.matrix }}' | jq .
+
+  # --- Alternative: read matrix from a file in the repo ---
+  # setup-from-file:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     matrix: ${{ steps.read.outputs.matrix }}
+  #   steps:
+  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+  #     - id: read
+  #       run: echo "matrix=$(jq -c . .github/matrix.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: "Build (Node ${{ matrix.node }} / ${{ matrix.os }})"
+    needs: setup
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      - run: node --version
+      - run: echo "Running on ${{ matrix.os }} with Node ${{ matrix.node }}"
