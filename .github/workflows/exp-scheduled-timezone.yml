@@ -1,0 +1,50 @@
+# Timezone-aware cron schedules
+# GitHub Actions cron schedules only support UTC. To run at a specific
+# local time, schedule hourly (or more frequently) and check the
+# current time in your target timezone, exiting early if outside
+# the desired window.
+# See: https://github.com/orgs/community/discussions/13454
+#
+# This example runs at 10:00 AM Eastern Time on weekdays only.
+
+name: Scheduled (Timezone-Aware)
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour, checked against target TZ
+  workflow_dispatch:
+
+jobs:
+  timezone-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if within target time window
+        id: tz-check
+        run: |
+          TARGET_HOUR=10
+          TARGET_TZ="America/New_York"
+
+          CURRENT_HOUR=$(TZ="$TARGET_TZ" date +%-H)
+          CURRENT_DAY=$(TZ="$TARGET_TZ" date +%u)  # 1=Mon, 7=Sun
+          CURRENT_TIME=$(TZ="$TARGET_TZ" date '+%Y-%m-%d %H:%M %Z')
+
+          echo "Current time in $TARGET_TZ: $CURRENT_TIME"
+          echo "Current hour: $CURRENT_HOUR (target: $TARGET_HOUR)"
+          echo "Current day: $CURRENT_DAY (1-5 = weekday)"
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "Manual trigger — skipping time check"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_HOUR" -eq "$TARGET_HOUR" && "$CURRENT_DAY" -le 5 ]]; then
+            echo "✅ Within target window — proceeding"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "⏭️ Outside target window — skipping"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run scheduled task
+        if: steps.tz-check.outputs.should_run == 'true'
+        run: |
+          echo "🚀 Running scheduled task at $(TZ='America/New_York' date '+%Y-%m-%d %H:%M %Z')"
+          # Add your actual work here — deploy, report, cleanup, etc.

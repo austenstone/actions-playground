@@ -1,0 +1,139 @@
+# =============================================================================
+# PROBLEM: Auto-committing from Actions causes infinite workflow loops
+# =============================================================================
+# When a workflow pushes a commit back to the repo, that push event triggers
+# the workflow AGAIN, creating an infinite loop:
+#
+#   push → workflow runs → commits changes → push → workflow runs → ...
+#
+# This is one of the most common footguns in GitHub Actions.
+# See: https://github.com/orgs/community/discussions/74772
+#
+# SOLUTIONS (demonstrated below):
+#   1. Use GITHUB_TOKEN — pushes made with the default token do NOT trigger
+#      subsequent workflow runs. This is the simplest and recommended approach.
+#   2. Add [skip ci] to the commit message to skip workflow triggers.
+#   3. Check if the actor is github-actions[bot] and bail early.
+#
+# NOTE: If you use a PAT or GitHub App token instead of GITHUB_TOKEN, pushes
+# WILL trigger workflows. That's sometimes intentional (e.g., you want
+# downstream workflows to fire), but it re-introduces the loop risk.
+# =============================================================================
+
+name: "Exp: Safe Auto-Commit"
+
+on:
+  push:
+    branches: [main]
+    paths: ["**.js", "**.ts"] # Only run on code changes
+  workflow_dispatch:
+
+# Prevent parallel runs on the same branch — critical for auto-commit workflows
+concurrency:
+  group: auto-commit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # SOLUTION 1: Use GITHUB_TOKEN (recommended)
+  # ===========================================================================
+  # Pushes made with the default GITHUB_TOKEN intentionally do NOT trigger
+  # new workflow runs. This is by design and is the simplest solution.
+  # Docs: https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+  solution-1-github-token:
+    name: "Solution 1: GITHUB_TOKEN (simplest)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auto-format code
+        run: |
+          echo "// Auto-formatted on $(date -u)" >> formatted.txt
+          echo "Pretend we ran prettier/eslint --fix here"
+
+      - name: Commit changes (safe — GITHUB_TOKEN won't re-trigger)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          # Only commit if there are changes
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: auto-format code"
+          git push
+        # GITHUB_TOKEN is used by default — no token config needed.
+        # The resulting push will NOT trigger this workflow again. Done.
+
+  # ===========================================================================
+  # SOLUTION 2: [skip ci] in commit message
+  # ===========================================================================
+  # GitHub recognizes [skip ci], [ci skip], [no ci], [skip actions], or
+  # [actions skip] anywhere in the commit message and skips workflow runs
+  # for that push. Works with ANY token type (PAT, App, GITHUB_TOKEN).
+  solution-2-skip-ci:
+    name: "Solution 2: [skip ci] commit message"
+    runs-on: ubuntu-latest
+    if: false # Disabled — flip to true to test
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auto-format code
+        run: |
+          echo "// Auto-formatted on $(date -u)" >> formatted.txt
+
+      - name: Commit with [skip ci]
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: auto-format code [skip ci]"
+          git push
+        # The [skip ci] in the message prevents any workflows from running
+        # on this push. Downside: it skips ALL workflows, not just this one.
+
+  # ===========================================================================
+  # SOLUTION 3: Check the actor / last commit author
+  # ===========================================================================
+  # If the workflow was triggered by a bot commit, bail out immediately.
+  # This is a defense-in-depth approach — useful when combined with a PAT
+  # or GitHub App token where you DO want some workflows to trigger.
+  solution-3-actor-check:
+    name: "Solution 3: Actor check"
+    runs-on: ubuntu-latest
+    # Skip if the push was made by the actions bot
+    if: github.actor != 'github-actions[bot]'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Double-check: inspect the last commit author as a fallback
+      - name: Check last commit author
+        id: check
+        run: |
+          LAST_AUTHOR=$(git log -1 --pretty=format:'%an')
+          echo "Last commit by: $LAST_AUTHOR"
+          if [ "$LAST_AUTHOR" = "github-actions[bot]" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-format code
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          echo "// Auto-formatted on $(date -u)" >> formatted.txt
+
+      - name: Commit changes
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: auto-format code"
+          git push
