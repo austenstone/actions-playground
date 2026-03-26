@@ -9,7 +9,7 @@ on:
 
 jobs:
   hello_world_job:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     name: A job to say hello
     steps:
       - uses: actions/checkout@v5

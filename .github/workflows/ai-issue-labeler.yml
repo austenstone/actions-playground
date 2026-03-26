@@ -17,7 +17,7 @@ permissions:
 jobs:
   label-issue:
     name: Auto-label Issue with AI
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

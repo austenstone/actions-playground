@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 jobs:
   find-and-replace:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/github-script@v6

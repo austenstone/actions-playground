@@ -14,7 +14,7 @@ jobs:
   # Setting Outputs
   outputs:
     name: Step & Job Outputs
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     outputs:
       version: ${{ steps.set-version.outputs.version }}
@@ -48,7 +48,7 @@ jobs:
 
   use-outputs:
     name: Use Job Outputs
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     needs: outputs
     
     steps:
@@ -60,7 +60,7 @@ jobs:
   # Environment Variables
   environment-vars:
     name: Dynamic Environment Variables
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Set env vars for future steps
@@ -87,7 +87,7 @@ jobs:
   # Annotations
   annotations:
     name: Notices, Warnings, Errors
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v5
@@ -118,7 +118,7 @@ jobs:
   # Log Grouping
   grouping:
     name: Log Groups
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Grouped output
@@ -142,7 +142,7 @@ jobs:
   # Masking Secrets
   masking:
     name: Mask Sensitive Values
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Mask generated secrets
@@ -161,7 +161,7 @@ jobs:
   # System PATH
   system-path:
     name: Add to PATH
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Add custom path
@@ -182,7 +182,7 @@ jobs:
   # Job Summaries
   summaries:
     name: Job Summaries
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Create summary
@@ -217,7 +217,7 @@ jobs:
   # Stop Commands
   stop-commands:
     name: Stop/Resume Commands
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     steps:
       - name: Stop command processing
@@ -238,7 +238,7 @@ jobs:
   # Practical Example
   practical:
     name: Practical Example
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     
     outputs:
       deployment-url: ${{ steps.deploy.outputs.url }}

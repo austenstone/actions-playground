@@ -70,7 +70,7 @@ jobs:
   # ==========================================================================
   test-shards:
     name: 'Test Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     
     strategy:
@@ -139,7 +139,7 @@ jobs:
   # ==========================================================================
   merge-reports:
     name: 📊 Merge Test Reports
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     
     # Run even if some shards failed (to see partial results)

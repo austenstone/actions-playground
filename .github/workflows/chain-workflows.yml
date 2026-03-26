@@ -7,7 +7,7 @@ env:
 
 jobs:
   call_other_workflow:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - run: gh workflow run dump-context.yml --ref ${{ github.head_ref || github.ref_name }}
       # github.head_ref is only set when the workflow was triggered by a pull_request and

@@ -52,7 +52,7 @@ permissions:
 jobs:
   setup:
     name: Setup Matrix
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -71,7 +71,7 @@ jobs:
   terraform:
     name: Terraform ${{ matrix.cloud }} (${{ matrix.environment }})
     needs: setup
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
@@ -250,7 +250,7 @@ jobs:
   summary:
     name: Deployment Summary
     needs: [setup, terraform]
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Download all outputs
