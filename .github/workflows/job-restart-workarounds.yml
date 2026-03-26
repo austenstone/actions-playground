@@ -40,36 +40,108 @@ jobs:
     name: "S1 · Orchestrator"
     if: inputs.strategy == 'orchestrator'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Dispatch child workflows
+      - name: Dispatch, monitor, and retry child workflows
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           REF: ${{ github.head_ref || github.ref_name }}
+          MAX_RETRIES: "2"
         run: |
           set -euo pipefail
 
-          declare -A jobs=(
-            ["fast-job"]="5:20"
+          # --- Config: job_name -> sleep_seconds:fail_chance ---
+          declare -A job_configs=(
+            ["fast-job"]="5:30"
             ["slow-job"]="30:10"
-            ["flaky-job"]="10:50"
+            ["flaky-job"]="8:60"
           )
 
-          for job_name in "${!jobs[@]}"; do
-            IFS=':' read -r sleep_s fail_pct <<< "${jobs[$job_name]}"
+          # --- Helper: dispatch a child and return the run ID ---
+          dispatch_child() {
+            local job_name=$1 sleep_s=$2 fail_pct=$3
             echo "🚀 Dispatching ${job_name} (sleep=${sleep_s}s, fail=${fail_pct}%)"
             gh workflow run job-restart-child.yml \
               --ref "${REF}" \
               -f "job-name=${job_name}" \
               -f "sleep-seconds=${sleep_s}" \
               -f "fail-chance=${fail_pct}"
+            sleep 3
+            # Grab the latest run ID for this workflow
+            gh run list --workflow=job-restart-child.yml --limit=1 --json databaseId --jq '.[0].databaseId'
+          }
+
+          # --- Dispatch all children ---
+          declare -A run_ids
+          declare -A retries
+          for job_name in "${!job_configs[@]}"; do
+            IFS=':' read -r sleep_s fail_pct <<< "${job_configs[$job_name]}"
+            run_ids[$job_name]=$(dispatch_child "$job_name" "$sleep_s" "$fail_pct")
+            retries[$job_name]=0
+            echo "   → Run ID: ${run_ids[$job_name]}"
           done
 
           echo ""
-          echo "✅ All child workflows dispatched."
-          echo "👉 Each child is a separate workflow run — you can restart/cancel them independently!"
-          echo "   View them: gh run list --workflow=job-restart-child.yml --limit=3"
+          echo "⏳ Monitoring all children — will retry failures immediately..."
+          echo ""
+
+          # --- Poll loop: check each child, retry on failure ---
+          all_done=false
+          while [ "${all_done}" = "false" ]; do
+            sleep 10
+            all_done=true
+
+            for job_name in "${!run_ids[@]}"; do
+              run_id=${run_ids[$job_name]}
+              status=$(gh run view "${run_id}" --json status,conclusion --jq '.status')
+
+              if [ "${status}" = "completed" ]; then
+                conclusion=$(gh run view "${run_id}" --json conclusion --jq '.conclusion')
+
+                if [ "${conclusion}" = "success" ]; then
+                  echo "✅ ${job_name} (run ${run_id}) succeeded"
+                elif [ "${retries[$job_name]}" -lt "${MAX_RETRIES}" ]; then
+                  retries[$job_name]=$((retries[$job_name] + 1))
+                  echo ""
+                  echo "❌ ${job_name} (run ${run_id}) failed — retry ${retries[$job_name]}/${MAX_RETRIES}"
+                  echo "   ↑ This is the key: re-dispatching immediately while other children still run!"
+                  IFS=':' read -r sleep_s fail_pct <<< "${job_configs[$job_name]}"
+                  run_ids[$job_name]=$(dispatch_child "$job_name" "$sleep_s" "$fail_pct")
+                  echo "   → New run ID: ${run_ids[$job_name]}"
+                  echo ""
+                  all_done=false
+                else
+                  echo "💥 ${job_name} (run ${run_id}) failed — no retries left"
+                fi
+              else
+                # Still running
+                all_done=false
+              fi
+            done
+          done
+
+          # --- Final report ---
+          echo ""
+          echo "📊 Final Results:"
+          any_failed=false
+          for job_name in "${!run_ids[@]}"; do
+            run_id=${run_ids[$job_name]}
+            conclusion=$(gh run view "${run_id}" --json conclusion --jq '.conclusion')
+            retry_count=${retries[$job_name]}
+            echo "  ${job_name}: ${conclusion} (${retry_count} retries, run ${run_id})"
+            if [ "${conclusion}" != "success" ]; then
+              any_failed=true
+            fi
+          done
+
+          if [ "${any_failed}" = "true" ]; then
+            echo ""
+            echo "💥 Some children failed after all retries"
+            exit 1
+          fi
+          echo ""
+          echo "✅ All children passed!"
 
   # ---------------------------------------------------------------------------
   # STRATEGY 2: continue-on-error + Retry Gate
