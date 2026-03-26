@@ -67,7 +67,7 @@ jobs:
               --ref "${REF}" \
               -f "job-name=${job_name}" \
               -f "sleep-seconds=${sleep_s}" \
-              -f "fail-chance=${fail_pct}"
+              -f "fail-chance=${fail_pct}" >&2
             sleep 3
             # Grab the latest run ID for this workflow (only this goes to stdout)
             gh run list --workflow=job-restart-child.yml --limit=1 --json databaseId --jq '.[0].databaseId'
