@@ -1,14 +1,13 @@
 name: "Job Restart Workarounds"
 
-# Demonstrates 5 workaround strategies for restarting failed jobs
+# Demonstrates 4 workaround strategies for restarting failed jobs
 # while a workflow is still running (github.com/orgs/community/discussions/73156).
 #
 # Strategies:
 #   1. orchestrator     — Each job is a separate workflow_dispatch, independently restartable
-#   2. continue-on-error — Jobs mask failure; a retry-gate re-runs failures via API
+#   2. auto-retry       — Just add one job: retry failed jobs up to X times (recommended)
 #   3. step-retry       — Step-level retry loops (bash, nick-fields/retry, wretry.action)
 #   4. matrix-retry     — Matrix attempts [1,2,3] with artifact success markers
-#   5. watcher-rerun    — Separate watcher workflow does gh run rerun --failed
 
 on:
   workflow_dispatch:
@@ -19,10 +18,9 @@ on:
         type: choice
         options:
           - orchestrator
-          - continue-on-error
+          - auto-retry
           - step-retry
           - matrix-retry
-          - watcher-rerun
 
 permissions:
   actions: write
@@ -145,104 +143,80 @@ jobs:
           echo "✅ All children passed!"
 
   # ---------------------------------------------------------------------------
-  # STRATEGY 2: continue-on-error + Retry Gate
+  # STRATEGY 2: Auto-Retry (Recommended)
   #
-  # Jobs run with continue-on-error: true so the workflow doesn't block.
-  # Each job outputs its real pass/fail status. A final "retry-gate" job
-  # checks which jobs failed and re-runs them via the Actions API.
+  # The simplest production-ready pattern. Your jobs run normally — no masking,
+  # no continue-on-error, no gate jobs. Just add ONE retry job at the bottom:
+  #
+  #   if: failure() && fromJSON(github.run_attempt) < 3
+  #
+  # On failure it dispatches job-restart-rerun.yml which waits for this run
+  # to conclude, then calls `gh run rerun --failed`. Only failed jobs re-run.
+  # github.run_attempt increments each time, capping retries automatically.
+  #
+  # This is what you'd add to any real workflow — copy s2-retry into yours.
+  # Requires: job-restart-rerun.yml (tiny helper, exists once per repo)
   # ---------------------------------------------------------------------------
   s2-fast-job:
-    name: "S2 · Fast Job"
-    if: inputs.strategy == 'continue-on-error'
+    name: "S2 · Fast Job (attempt ${{ github.run_attempt }})"
+    if: inputs.strategy == 'auto-retry'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
-    outputs:
-      real-status: ${{ steps.work.outcome }}
     steps:
       - name: Do work
-        id: work
         run: |
           set -euo pipefail
-          echo "⚡ Fast job running..."
+          echo "⚡ Fast job — attempt ${{ github.run_attempt }}"
           sleep 5
           exit $((RANDOM % 3 == 0 ? 1 : 0))
 
   s2-slow-job:
-    name: "S2 · Slow Job"
-    if: inputs.strategy == 'continue-on-error'
+    name: "S2 · Slow Job (attempt ${{ github.run_attempt }})"
+    if: inputs.strategy == 'auto-retry'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
-    outputs:
-      real-status: ${{ steps.work.outcome }}
     steps:
       - name: Do work
-        id: work
         run: |
           set -euo pipefail
-          echo "🐢 Slow job running..."
-          sleep 30
+          echo "🐢 Slow job — attempt ${{ github.run_attempt }}"
+          sleep 20
           exit $((RANDOM % 5 == 0 ? 1 : 0))
 
   s2-flaky-job:
-    name: "S2 · Flaky Job"
-    if: inputs.strategy == 'continue-on-error'
+    name: "S2 · Flaky Job (attempt ${{ github.run_attempt }})"
+    if: inputs.strategy == 'auto-retry'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
-    outputs:
-      real-status: ${{ steps.work.outcome }}
     steps:
       - name: Do work
-        id: work
         run: |
           set -euo pipefail
-          echo "🎰 Flaky job running..."
+          echo "🎰 Flaky job — attempt ${{ github.run_attempt }}"
           sleep 3
           exit $((RANDOM % 2))
 
-  s2-retry-gate:
-    name: "S2 · Retry Gate"
-    if: inputs.strategy == 'continue-on-error' && always()
+  # ⬇️ THIS IS THE ONLY THING YOU ADD TO YOUR WORKFLOW ⬇️
+  s2-retry:
+    name: "S2 · Auto-Retry (${{ github.run_attempt }}/3)"
+    if: inputs.strategy == 'auto-retry' && failure() && fromJSON(github.run_attempt) < 3
     needs: [s2-fast-job, s2-slow-job, s2-flaky-job]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check results and re-run failures
+      - name: Dispatch rerun of failed jobs
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          FAST_STATUS: ${{ needs.s2-fast-job.outputs.real-status }}
-          SLOW_STATUS: ${{ needs.s2-slow-job.outputs.real-status }}
-          FLAKY_STATUS: ${{ needs.s2-flaky-job.outputs.real-status }}
+          REF: ${{ github.head_ref || github.ref_name }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          echo "📊 Job Results:"
-          echo "  Fast:  ${FAST_STATUS}"
-          echo "  Slow:  ${SLOW_STATUS}"
-          echo "  Flaky: ${FLAKY_STATUS}"
-
-          failed=false
-          for status in "${FAST_STATUS}" "${SLOW_STATUS}" "${FLAKY_STATUS}"; do
-            if [ "${status}" = "failure" ]; then
-              failed=true
-              break
-            fi
-          done
-
-          if [ "${failed}" = "true" ]; then
-            echo ""
-            echo "❌ Some jobs failed. In production, you would call:"
-            echo "   gh run rerun ${RUN_ID} --failed"
-            echo ""
-            echo "⚠️  Note: continue-on-error masks the real status in check runs."
-            echo "   This is the main trade-off of this strategy."
-          else
-            echo ""
-            echo "✅ All jobs passed!"
-          fi
+          echo "🔄 Attempt ${{ github.run_attempt }} had failures — dispatching retry..."
+          gh workflow run job-restart-rerun.yml \
+            --ref "${REF}" \
+            -F "run_id=${RUN_ID}"
+          echo "✅ Retry dispatched. Only failed jobs will re-run."
 
   # ---------------------------------------------------------------------------
   # STRATEGY 3: Step-Level Retry
@@ -425,62 +399,3 @@ jobs:
             echo "💥 All matrix attempts failed!"
             exit 1
           fi
-
-  # ---------------------------------------------------------------------------
-  # STRATEGY 5: Watcher Rerun Workflow
-  #
-  # Most production-ready pattern. On failure, dispatches a separate
-  # job-restart-rerun.yml that:
-  #   1) gh run watch — blocks until this workflow concludes
-  #   2) gh run rerun --failed — re-runs only the failed jobs
-  #
-  # Solves the "run cannot be rerun; its workflow file may be broken" error.
-  # Attempt-limited via fromJSON(github.run_attempt) < 3.
-  # ---------------------------------------------------------------------------
-  s5-fast-job:
-    name: "S5 · Fast Job"
-    if: inputs.strategy == 'watcher-rerun'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Do work
-        run: |
-          set -euo pipefail
-          echo "⚡ Fast job (attempt ${{ github.run_attempt }})"
-          sleep 3
-          exit $((RANDOM % 3 == 0 ? 1 : 0))
-
-  s5-slow-job:
-    name: "S5 · Slow Job"
-    if: inputs.strategy == 'watcher-rerun'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Do work
-        run: |
-          set -euo pipefail
-          echo "🐢 Slow job (attempt ${{ github.run_attempt }})"
-          sleep 20
-          exit $((RANDOM % 5 == 0 ? 1 : 0))
-
-  s5-rerun-on-failure:
-    name: "S5 · Rerun Dispatcher"
-    if: inputs.strategy == 'watcher-rerun' && failure() && fromJSON(github.run_attempt) < 3
-    needs: [s5-fast-job, s5-slow-job]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Dispatch watcher rerun workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          REF: ${{ github.head_ref || github.ref_name }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          echo "🔄 Attempt ${{ github.run_attempt }} had failures."
-          echo "📡 Dispatching watcher rerun workflow..."
-          gh workflow run job-restart-rerun.yml \
-            --ref "${REF}" \
-            -F "run_id=${RUN_ID}"
-          echo "✅ Watcher dispatched — it will wait for this run to conclude, then rerun failed jobs."
