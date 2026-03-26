@@ -236,22 +236,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # wretry can retry `uses:` action steps — not just shell commands
-      - name: Retry an action step
+      # wretry can retry `uses:` action steps — not just shell commands.
+      # This is useful for retrying actions like checkout on network flakes.
+      - name: Retry a command with wretry
         # Wandalen/wretry.action v3.8.0
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea
         with:
-          action: actions/github-script@v7
           attempt_limit: 3
           attempt_delay: 5000
+          command: |
+            echo "🎲 Rolling the dice (wretry)..."
+            exit $((RANDOM % 3 == 0 ? 1 : 0))
+
+      - name: Retry a uses action step (checkout)
+        # wretry's killer feature: retry `uses:` steps, not just commands
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea
+        with:
+          action: actions/checkout@v4
+          attempt_limit: 3
+          attempt_delay: 2000
           with: |
-            script: |
-              const roll = Math.floor(Math.random() * 3);
-              if (roll === 0) {
-                core.setFailed('💥 Simulated action failure!');
-              } else {
-                core.info('✅ Action step succeeded');
-              }
+            fetch-depth: 1
 
   # ---------------------------------------------------------------------------
   # STRATEGY 4: Matrix Attempts
