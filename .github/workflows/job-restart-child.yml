@@ -1,0 +1,53 @@
+name: "Job Restart: Child Workflow"
+
+# Strategy 1 helper — dispatched by the orchestrator as an independent workflow run.
+# Each child is independently restartable/cancellable while siblings keep running.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job-name:
+        description: "Name of the simulated job"
+        required: true
+        type: string
+      fail-chance:
+        description: "Probability of failure (0-100)"
+        required: false
+        default: "30"
+        type: string
+      sleep-seconds:
+        description: "Seconds to sleep (simulates long-running work)"
+        required: false
+        default: "10"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: "${{ inputs.job-name }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Simulate work
+        env:
+          SLEEP_SECONDS: ${{ inputs.sleep-seconds }}
+        run: |
+          set -euo pipefail
+          echo "🔧 Running job: ${{ inputs.job-name }}"
+          echo "⏱️ Sleeping ${SLEEP_SECONDS}s to simulate work..."
+          sleep "${SLEEP_SECONDS}"
+
+      - name: Random failure gate
+        env:
+          FAIL_CHANCE: ${{ inputs.fail-chance }}
+        run: |
+          set -euo pipefail
+          roll=$((RANDOM % 100))
+          echo "🎲 Rolled ${roll} (fail threshold: ${FAIL_CHANCE})"
+          if [ "${roll}" -lt "${FAIL_CHANCE}" ]; then
+            echo "💥 Simulated failure!"
+            exit 1
+          fi
+          echo "✅ Job succeeded"

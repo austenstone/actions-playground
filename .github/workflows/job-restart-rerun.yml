@@ -1,0 +1,36 @@
+name: "Job Restart: Watcher Rerun"
+
+# Strategy 5 helper — watches a running workflow until it concludes,
+# then re-runs only the failed jobs. Solves the "run cannot be rerun;
+# its workflow file may be broken" error from calling rerun mid-flight.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "The workflow run ID to watch and rerun"
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  rerun:
+    name: "Watch & rerun failed jobs"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Wait for run to conclude, then rerun failed jobs
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          echo "👀 Watching run ${RUN_ID} until it concludes..."
+          gh run watch "${RUN_ID}" > /dev/null 2>&1 || true
+          echo "🔄 Re-running failed jobs for run ${RUN_ID}..."
+          gh run rerun "${RUN_ID}" --failed
+          echo "✅ Rerun triggered successfully"
