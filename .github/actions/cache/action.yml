@@ -1,0 +1,66 @@
+name: Cache (with Datadog telemetry)
+description: Drop-in replacement for actions/cache that emits hit-rate and restore-duration telemetry to Datadog.
+
+inputs:
+  path:
+    description: A list of files, directories, and wildcard patterns to cache and restore.
+    required: true
+  key:
+    description: An explicit key for restoring and saving the cache.
+    required: true
+  restore-keys:
+    description: An ordered list of prefix-matched keys to use for restoring stale cache.
+    required: false
+  upload-chunk-size:
+    description: The chunk size used to split up large files during upload, in bytes.
+    required: false
+  enableCrossOsArchive:
+    description: When true, allows windows runners to save/restore caches that can be restored on any platform.
+    required: false
+    default: 'false'
+  fail-on-cache-miss:
+    description: Fail the workflow if cache entry is not found.
+    required: false
+    default: 'false'
+  lookup-only:
+    description: Check if a cache entry exists for the given input(s) without downloading.
+    required: false
+    default: 'false'
+  save-always:
+    description: Run the post step to save the cache even if another step fails.
+    required: false
+    default: 'false'
+
+outputs:
+  cache-hit:
+    description: A boolean value to indicate an exact match was found for the primary key.
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - id: start
+      shell: bash
+      run: echo "ts=$(date +%s%3N)" >> "$GITHUB_OUTPUT"
+
+    - id: cache
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}
+        restore-keys: ${{ inputs.restore-keys }}
+        upload-chunk-size: ${{ inputs.upload-chunk-size }}
+        enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
+        fail-on-cache-miss: ${{ inputs.fail-on-cache-miss }}
+        lookup-only: ${{ inputs.lookup-only }}
+        save-always: ${{ inputs.save-always }}
+
+    - if: always()
+      shell: bash
+      env:
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        CACHE_KEY: ${{ inputs.key }}
+        START_TS: ${{ steps.start.outputs.ts }}
+        DD_API_KEY: ${{ env.DD_API_KEY }}
+        DD_SITE: ${{ env.DD_SITE }}
+      run: ${{ github.action_path }}/emit.sh
