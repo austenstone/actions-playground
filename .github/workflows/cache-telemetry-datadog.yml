@@ -1,0 +1,88 @@
+name: Cache Telemetry → Datadog (POC)
+
+# Demonstrates per-step actions/cache hit/miss telemetry shipped to Datadog.
+#
+# Why this exists:
+#   GitHub does not expose actions/cache hit-rate or restore latency in the
+#   Actions Performance Metrics UI today. The data is emitted server-side
+#   (see github/customer-feedback#13531) but is not customer-accessible. Until
+#   GitHub ships a Cache tab in APM, this is a reasonable workaround.
+#
+# How it works:
+#   1. Run actions/cache as normal.
+#   2. Capture restore start/end timestamps via `date +%s%3N`.
+#   3. Pipe the cache-hit output + duration into the cache-telemetry composite
+#      action, which posts to Datadog v2 metrics API.
+#
+# Hit rate in Datadog:
+#   sum(actions.cache.hit{repo:vercel/next.js}.as_count())
+#     / sum(actions.cache.lookup{repo:vercel/next.js}.as_count())
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/cache-telemetry-datadog.yml'
+      - '.github/actions/cache-telemetry/**'
+      - 'cache-telemetry-demo/**'
+
+defaults:
+  run:
+    working-directory: cache-telemetry-demo
+
+permissions:
+  contents: read
+
+jobs:
+  build-with-cache-telemetry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 9
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+        working-directory: cache-telemetry-demo
+
+      - name: Mark restore start
+        id: restore-start
+        run: echo "ts=$(date +%s%3N)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        id: cache-pnpm
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('cache-telemetry-demo/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Compute restore duration
+        id: restore-duration
+        run: |
+          end=$(date +%s%3N)
+          start=${{ steps.restore-start.outputs.ts }}
+          echo "ms=$((end - start))" >> "$GITHUB_OUTPUT"
+
+      - name: Emit cache telemetry to Datadog
+        if: always()
+        uses: ./.github/actions/cache-telemetry
+        with:
+          cache-hit: ${{ steps.cache-pnpm.outputs.cache-hit }}
+          cache-key: ${{ runner.os }}-pnpm-store-${{ hashFiles('cache-telemetry-demo/pnpm-lock.yaml') }}
+          cache-name: pnpm-store
+          restore-duration-ms: ${{ steps.restore-duration.outputs.ms }}
+          datadog-api-key: ${{ secrets.DD_API_KEY }}
+          datadog-site: datadoghq.com
+          extra-tags: service:actions-playground,env:ci
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
