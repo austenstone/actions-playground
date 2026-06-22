@@ -1,0 +1,49 @@
+name: Repro Docker Action Allowlist
+
+# Reproduces github/actions-sales support thread (Mercado Libre / mercadolibre-emu):
+# docker:// container actions get "action not allowed" under the Actions allowlist
+# policy, specifically on fork PR runs. This workflow runs the SAME docker action
+# references so we can flip the org allowlist policy and observe access control.
+#
+# Customer-reported blocked references:
+#   docker://ghcr.io/wolfi-dev/sdk:latest@sha256:ab0a3520b29f737b1219bb744f282e3e28bb55c889bc89e5a289f8a5e9380678
+#   docker://ghcr.io/wolfi-dev/sdk@sha256:51b308ba1e59bc6a33532e4eb4007d0e328103f1c6e4130e1220225e01b5b9e1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/repro-docker-action-allowlist.yml
+
+jobs:
+  baseline:
+    name: Baseline docker actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Public Docker Hub image (docker://alpine)
+        uses: docker://alpine:3.18
+        with:
+          entrypoint: echo
+          args: "alpine docker action ran"
+
+      - name: wolfi-dev/sdk by mutable tag (docker://ghcr.io)
+        uses: docker://ghcr.io/wolfi-dev/sdk:latest
+        with:
+          entrypoint: uname
+          args: -a
+
+  customer-exact:
+    name: Customer-exact references
+    runs-on: ubuntu-latest
+    steps:
+      - name: wolfi-dev/sdk tag@sha (customer ref A)
+        uses: docker://ghcr.io/wolfi-dev/sdk:latest@sha256:ab0a3520b29f737b1219bb744f282e3e28bb55c889bc89e5a289f8a5e9380678
+        with:
+          entrypoint: uname
+          args: -a
+
+      - name: wolfi-dev/sdk sha-only (customer ref B)
+        uses: docker://ghcr.io/wolfi-dev/sdk@sha256:51b308ba1e59bc6a33532e4eb4007d0e328103f1c6e4130e1220225e01b5b9e1
+        with:
+          entrypoint: uname
+          args: -a
