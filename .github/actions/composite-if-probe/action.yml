@@ -1,0 +1,15 @@
+name: Composite if probe
+description: Proves that conditions on embedded steps do not skip the caller step
+
+runs:
+  using: composite
+  steps:
+    - name: Embedded step with false condition
+      if: ${{ github.event_name == 'does_not_exist' }}
+      shell: bash
+      run: touch "${RUNNER_TEMP}/embedded-step-ran"
+
+    - name: Second embedded step with false condition
+      if: ${{ false }}
+      shell: bash
+      run: touch "${RUNNER_TEMP}/second-embedded-step-ran"
