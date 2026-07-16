@@ -1,0 +1,77 @@
+name: Composite if reproduction
+
+on:
+  push:
+    branches:
+      - composite-if-repro-20260716
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  condition-inside-composite:
+    name: Condition inside composite
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Invoke composite without caller condition
+        id: invoked
+        uses: ./.github/actions/composite-if-probe
+
+      - name: Prove caller succeeded while embedded steps skipped
+        env:
+          CALLER_OUTCOME: ${{ steps.invoked.outcome }}
+        run: |
+          test "$CALLER_OUTCOME" = "success"
+          test ! -e "${RUNNER_TEMP}/embedded-step-ran"
+          test ! -e "${RUNNER_TEMP}/second-embedded-step-ran"
+          printf 'Caller outcome: %s\n' "$CALLER_OUTCOME"
+
+  condition-on-caller:
+    name: Condition on caller step
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Invoke composite only when condition is true
+        id: skipped
+        if: ${{ github.event_name == 'does_not_exist' }}
+        uses: ./.github/actions/composite-if-probe
+
+      - name: Prove the caller was skipped
+        if: ${{ always() }}
+        env:
+          CALLER_OUTCOME: ${{ steps.skipped.outcome }}
+        run: |
+          test "$CALLER_OUTCOME" = "skipped"
+          test ! -e "${RUNNER_TEMP}/embedded-step-ran"
+          test ! -e "${RUNNER_TEMP}/second-embedded-step-ran"
+          printf 'Caller outcome: %s\n' "$CALLER_OUTCOME"
+
+  condition-on-job:
+    name: Condition on job
+    if: ${{ github.event_name == 'does_not_exist' }}
+    runs-on: ubuntu-slim
+    steps:
+      - run: echo "This job must never be scheduled"
+
+  exact-upstream-action:
+    name: Exact upload-code-coverage action
+    runs-on: ubuntu-slim
+    steps:
+      - name: Invoke action whose embedded conditions are false
+        id: upstream
+        uses: actions/upload-code-coverage@jkbschmid-add-filter
+        with:
+          file: does-not-exist.xml
+          language: Python
+          label: composite-if-repro
+
+      - name: Prove the upstream caller still succeeded
+        env:
+          CALLER_OUTCOME: ${{ steps.upstream.outcome }}
+        run: |
+          test "$CALLER_OUTCOME" = "success"
+          printf 'Caller outcome: %s\n' "$CALLER_OUTCOME"
