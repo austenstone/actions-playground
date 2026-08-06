@@ -1,0 +1,112 @@
+name: OIDC Fork Probe
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  probe:
+    name: probe (no environment)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Context
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: |
+          echo "event=$GITHUB_EVENT_NAME"
+          echo "base_repository=$GITHUB_REPOSITORY"
+          echo "head_repository=${HEAD_REPO:-n/a}"
+          echo "head_is_fork=${IS_FORK:-n/a}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL_set=${ACTIONS_ID_TOKEN_REQUEST_URL:+YES}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN_set=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+YES}"
+
+      - name: Probe GITHUB_TOKEN permissions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code=$(curl -s -o /tmp/body -w '%{http_code}' \
+            -X PATCH \
+            -H "Authorization: bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY" \
+            -d '{"description":"write-probe"}' || true)
+          echo "contents:write probe -> HTTP $code (403 = read-only token)"
+
+      - name: Attempt to mint OIDC token
+        id: mint
+        continue-on-error: true
+        run: |
+          set -u
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "RESULT=permission-dropped" >> "$GITHUB_OUTPUT"
+            echo "::warning::id-token:write was NOT granted - no OIDC request URL in env"
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/oidc.json -w '%{http_code}' \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=fork-probe")
+          echo "token service HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "RESULT=token-service-rejected" >> "$GITHUB_OUTPUT"
+            cat /tmp/oidc.json
+            exit 0
+          fi
+          echo "RESULT=minted" >> "$GITHUB_OUTPUT"
+          payload=$(jq -r .value /tmp/oidc.json | cut -d. -f2)
+          case $(( ${#payload} % 4 )) in
+            2) payload="${payload}==" ;;
+            3) payload="${payload}=" ;;
+          esac
+          echo "$payload" | tr '_-' '/+' | base64 -d | jq . | tee /tmp/claims.json
+
+      - name: Summarise
+        run: |
+          {
+            echo "## OIDC fork probe"
+            echo ""
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| event | \`$GITHUB_EVENT_NAME\` |"
+            echo "| base repo | \`$GITHUB_REPOSITORY\` |"
+            echo "| head repo | \`${{ github.event.pull_request.head.repo.full_name || 'n/a' }}\` |"
+            echo "| id-token env present | \`${ACTIONS_ID_TOKEN_REQUEST_URL:+YES}\` |"
+            echo "| result | \`${{ steps.mint.outputs.RESULT }}\` |"
+            echo ""
+            if [ -s /tmp/claims.json ]; then
+              echo "### Claims"
+              echo '```json'
+              cat /tmp/claims.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  probe-env:
+    name: probe (base-repo environment gate)
+    runs-on: ubuntu-latest
+    environment: trusted-fork-run
+    steps:
+      - name: Attempt to mint OIDC token behind environment
+        run: |
+          set -u
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "::warning::id-token:write NOT granted even behind an approved environment"
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/oidc.json -w '%{http_code}' \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=fork-probe")
+          echo "token service HTTP $code"
+          [ "$code" = "200" ] || { cat /tmp/oidc.json; exit 0; }
+          payload=$(jq -r .value /tmp/oidc.json | cut -d. -f2)
+          case $(( ${#payload} % 4 )) in
+            2) payload="${payload}==" ;;
+            3) payload="${payload}=" ;;
+          esac
+          echo "$payload" | tr '_-' '/+' | base64 -d | jq .
