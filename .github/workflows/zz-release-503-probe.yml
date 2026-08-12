@@ -1,0 +1,29 @@
+name: Release 503 probe
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe release asset downloads (anonymous)
+        run: |
+          urls=(
+            "https://github.com/knative/serving/releases/download/knative-v1.15.0/serving-core.yaml"
+            "https://github.com/chainguard-dev/terraform-provider-apko/releases/download/v1.2.12/terraform-provider-apko_1.2.12_linux_amd64.zip"
+            "https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64"
+            "https://github.com/cli/cli/releases/download/v2.62.0/gh_2.62.0_linux_amd64.tar.gz"
+          )
+          echo "runner egress IP: $(curl -s --max-time 10 https://api.ipify.org)"
+          fail=0
+          for url in "${urls[@]}"; do
+            for i in $(seq 1 10); do
+              code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 30 "$url" || echo "curl-err")
+              echo "$code  $i  $url"
+              [ "$code" = "200" ] || fail=$((fail+1))
+            done
+          done
+          echo "non-200 responses: $fail"
