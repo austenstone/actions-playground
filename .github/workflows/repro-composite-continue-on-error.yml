@@ -1,0 +1,66 @@
+name: Repro Composite continue-on-error Icon
+
+# Repro for the visual bug reported in #actions-eng (2026-08-14):
+# a composite action step that FAILS but has `continue-on-error: true` renders a
+# warning triangle overlaid on top of the success check icon in the run log UI.
+#
+# Slack: https://github.slack.com/archives/C01SKER9S1G/p1786740893538289
+# Original minimal repro by @robherley: github.com/robherley/tmp-repro-composite
+#
+# Jobs are ordered bug-first so the run page shows the broken rendering up top,
+# with controls below to prove it is specific to composite steps.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/repro-composite-continue-on-error.yml
+      - .github/actions/composite-continue-on-error/**
+      - .github/actions/composite-continue-on-error-nested/**
+
+permissions:
+  contents: read
+
+jobs:
+  bug-composite:
+    name: BUG - composite step, continue-on-error, fails
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v5
+
+      # Expand this action group: the "failing (but continue) step" shows a
+      # warning triangle stamped over the success check.
+      - uses: ./.github/actions/composite-continue-on-error
+
+  bug-composite-nested:
+    name: BUG - nested composite, continue-on-error, fails
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/composite-continue-on-error-nested
+
+  control-job-level:
+    name: CONTROL - job-level step, continue-on-error, fails
+    runs-on: ubuntu-slim
+    steps:
+      # Same semantics as the composite step, but declared directly in the job.
+      # This one renders correctly, which is what isolates the bug to composites.
+      - name: failing (but continue) step
+        continue-on-error: true
+        run: exit 1
+
+      - name: success step
+        run: echo hello
+
+  control-composite-passing:
+    name: CONTROL - composite step, continue-on-error, passes
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v5
+
+      # Identical action and identical `continue-on-error`, but the step exits 0.
+      # Renders a clean check, so the trigger is the failure, not the attribute.
+      - uses: ./.github/actions/composite-continue-on-error
+        with:
+          should-fail: 'false'

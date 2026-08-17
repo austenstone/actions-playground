@@ -1,0 +1,26 @@
+name: 'Composite continue-on-error'
+description: 'Composite action whose first step has continue-on-error and optionally fails'
+
+inputs:
+  should-fail:
+    description: 'Whether the continue-on-error step exits non-zero'
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: failing (but continue) step
+      shell: bash
+      continue-on-error: true
+      run: |
+        if [ "$SHOULD_FAIL" = "true" ]; then
+          exit 1
+        fi
+        echo "did not fail"
+      env:
+        SHOULD_FAIL: ${{ inputs.should-fail }}
+
+    - name: success step
+      shell: bash
+      run: echo hello
