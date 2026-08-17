@@ -1,9 +1,10 @@
 name: Repro Composite continue-on-error Icon
 
-# Repro for the visual bug reported in #actions-eng (2026-08-14):
+# Repro for the visual bug reported by @robherley (Vercel) on 2026-08-14:
 # a composite action step that FAILS but has `continue-on-error: true` renders a
 # warning triangle overlaid on top of the success check icon in the run log UI.
 #
+# Tracking: https://github.com/github/c2c-actions/issues/10428
 # Slack: https://github.slack.com/archives/C01SKER9S1G/p1786740893538289
 # Original minimal repro by @robherley: github.com/robherley/tmp-repro-composite
 #
