@@ -1,0 +1,16 @@
+name: 'Composite continue-on-error (nested)'
+description: 'Wraps the buggy composite in another composite to check icon nesting'
+
+runs:
+  using: composite
+  steps:
+    - name: before nested action
+      shell: bash
+      run: echo before
+
+    - name: nested composite
+      uses: ./.github/actions/composite-continue-on-error
+
+    - name: after nested action
+      shell: bash
+      run: echo after
