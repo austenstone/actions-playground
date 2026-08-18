@@ -1,0 +1,90 @@
+name: apt retries no-op proof
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-proof:
+    name: static proof (no timing)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: apt-config introspection
+        run: |
+          set -euo pipefail
+          echo "=== 1. what the image actually ships ==="
+          ls -l /etc/apt/apt.conf.d/80-retries
+          cat /etc/apt/apt.conf.d/80-retries
+
+          echo "=== 2. does apt see a value at the key it reads? ==="
+          echo -n "apt-config dump Acquire::Retries -> "
+          apt-config dump Acquire::Retries | sed 's/^$/<EMPTY>/'
+          echo "(empty means apt falls back to its compiled default of 3)"
+
+          echo "=== 3. where did the shipped line actually land? ==="
+          apt-config dump | grep -i retries
+
+          echo "=== 4. control: write the key apt actually reads ==="
+          printf 'Acquire::Retries "10";\n' | sudo tee /etc/apt/apt.conf.d/80-retries >/dev/null
+          echo -n "apt-config dump Acquire::Retries -> "
+          apt-config dump Acquire::Retries
+
+          echo "=== 5. timeout config shipped by the image ==="
+          echo -n "Acquire::http::Timeout -> "
+          apt-config dump Acquire::http::Timeout | sed 's/^$/<EMPTY> (stock 120s)/'
+
+  behavioral-proof:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: A-stock-image-config
+            opts: ""
+          - name: B-explicit-retries-3
+            opts: "-o Acquire::Retries=3"
+          - name: C-explicit-retries-10
+            opts: "-o Acquire::Retries=10"
+          - name: D-explicit-retries-0
+            opts: "-o Acquire::Retries=0"
+    steps:
+      - name: Blackhole a single mirror, no fallback
+        run: |
+          set -euo pipefail
+          sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+          mkdir -p /tmp/sources.list.d
+          cat <<'EOF' | sudo tee /tmp/sources.list.d/test.sources >/dev/null
+          Types: deb
+          URIs: http://192.0.2.1/ubuntu
+          Suites: noble
+          Components: main
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+          echo "shipped retries config still in place:"
+          cat /etc/apt/apt.conf.d/80-retries
+
+      - name: Measure attempts via elapsed / 5s timeout
+        env:
+          OPTS: ${{ matrix.opts }}
+          VARIANT: ${{ matrix.name }}
+        run: |
+          set +e
+          lists=$(mktemp -d); mkdir -p "$lists/partial"
+          start=$(date +%s)
+          # shellcheck disable=SC2086
+          sudo timeout 300 apt-get update \
+            -o Dir::Etc::SourceList=/dev/null \
+            -o Dir::Etc::SourceParts=/tmp/sources.list.d \
+            -o Dir::State::Lists="$lists" \
+            -o Acquire::http::Timeout=5 \
+            $OPTS >/tmp/out.log 2>&1
+          rc=$?
+          elapsed=$(( $(date +%s) - start ))
+          set -e
+          echo "RESULT $VARIANT elapsed=${elapsed}s implied_attempts=$(( elapsed / 5 )) rc=$rc"
+          tail -5 /tmp/out.log
