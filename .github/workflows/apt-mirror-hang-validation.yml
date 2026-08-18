@@ -1,0 +1,161 @@
+name: apt mirror hang validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image-config:
+    name: What the image actually ships
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Retry config as shipped
+        run: |
+          echo "--- /etc/apt/apt.conf.d/80-retries ---"
+          cat /etc/apt/apt.conf.d/80-retries || echo "(missing)"
+
+      - name: Does apt resolve the key it was given?
+        run: |
+          echo "--- every 'retries' node apt sees ---"
+          apt-config dump | grep -i retries || echo "(none)"
+          echo
+          echo "--- apt-config dump Acquire::Retries (the key apt actually reads) ---"
+          out=$(apt-config dump Acquire::Retries)
+          if [ -z "$out" ]; then
+            echo "EMPTY -> unset -> apt falls back to its compiled default of 3"
+          else
+            echo "$out"
+          fi
+
+      - name: Timeout config as shipped
+        run: |
+          echo "--- Acquire::http::Timeout ---"
+          out=$(apt-config dump Acquire::http::Timeout)
+          if [ -z "$out" ]; then
+            echo "EMPTY -> unset -> apt compiled default (120s)"
+          else
+            echo "$out"
+          fi
+          echo "--- all Acquire::http nodes ---"
+          apt-config dump | grep -i "Acquire::http" || echo "(none)"
+
+      - name: Mirror list
+        run: cat /etc/apt/apt-mirrors.txt
+
+      - name: Did the build-time apt retry wrapper survive into the final image?
+        run: |
+          echo "resolved apt-get: $(command -v apt-get)"
+          if [ -f /usr/local/bin/apt-get ]; then
+            echo "WRAPPER PRESENT - retry math is different than assumed"
+            head -20 /usr/local/bin/apt-get
+          else
+            echo "No /usr/local/bin/apt-get wrapper. Real apt-get only."
+          fi
+
+      - name: Are jq and zip already installed?
+        run: |
+          for t in jq zip unzip; do
+            printf '%s -> %s\n' "$t" "$(command -v $t || echo MISSING)"
+          done
+          jq --version; zip --version | head -2
+
+  timing:
+    name: Timing under a blackholed mirror
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Blackhole a mirror IP (drop packets, do not refuse)
+        run: |
+          # 192.0.2.0/24 is TEST-NET-1. Routed via default gw, so DROP produces
+          # SYN retransmit -> genuine connect hang, which is the failure mode
+          # a slow/unresponsive archive presents. A refused connection would
+          # fail instantly and prove nothing.
+          sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+          echo 'deb http://192.0.2.1/ubuntu noble main' | sudo tee /tmp/blackhole.list
+
+      - name: Define timing helper
+        run: |
+          cat > /tmp/timeit.sh <<'SH'
+          #!/bin/bash
+          # $1 = label, rest = apt -o overrides
+          label="$1"; shift
+          lists=$(mktemp -d)
+          mkdir -p "$lists/partial"
+          start=$(date +%s)
+          sudo timeout 900 apt-get update \
+            -o Dir::Etc::SourceList=/tmp/blackhole.list \
+            -o Dir::Etc::SourceParts=/dev/null \
+            -o Dir::State::Lists="$lists" \
+            "$@" >/dev/null 2>&1
+          rc=$?
+          end=$(date +%s)
+          printf '%s|%s|%s\n' "$label" "$((end-start))" "$rc" | tee -a /tmp/results.txt
+          SH
+          chmod +x /tmp/timeit.sh
+
+      - name: A - image default (nothing overridden)
+        run: /tmp/timeit.sh "A_image_default"
+
+      - name: B - APT::Acquire::Retries=6 (the spelling the image uses)
+        run: /tmp/timeit.sh "B_APT_prefixed_retries_6" -o Acquire::http::Timeout=10 -o APT::Acquire::Retries=6
+
+      - name: C - Acquire::Retries=6 (the spelling apt reads)
+        run: /tmp/timeit.sh "C_real_retries_6" -o Acquire::http::Timeout=10 -o Acquire::Retries=6
+
+      - name: D - proposed fail-fast config
+        run: /tmp/timeit.sh "D_fail_fast" -o Acquire::Retries=1 -o Acquire::http::Timeout=15
+
+      - name: Results
+        run: |
+          echo "| variant | seconds | exit |"
+          echo "|---|---|---|"
+          awk -F'|' '{printf "| %s | %s | %s |\n", $1, $2, $3}' /tmp/results.txt
+          {
+            echo "## Blackholed-mirror timings"
+            echo
+            echo "| variant | seconds | exit |"
+            echo "|---|---|---|"
+            awk -F'|' '{printf "| %s | %s | %s |\n", $1, $2, $3}' /tmp/results.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  failover:
+    name: Real-world shape - bad primary, good fallback
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Blackhole primary, keep a working fallback
+        run: |
+          sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+          printf 'http://192.0.2.1/ubuntu/\tpriority:1\nhttps://archive.ubuntu.com/ubuntu/\tpriority:2\n' \
+            | sudo tee /tmp/test-mirrors.txt
+          mkdir -p /tmp/sources.list.d
+          sudo cp /etc/apt/sources.list.d/ubuntu.sources /tmp/sources.list.d/ubuntu.sources
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|mirror+file:/tmp/test-mirrors.txt|' /tmp/sources.list.d/ubuntu.sources
+          echo "--- test sources ---"; cat /tmp/sources.list.d/ubuntu.sources
+
+      - name: Stock config, primary mirror hanging
+        run: |
+          lists=$(mktemp -d); mkdir -p "$lists/partial"
+          start=$(date +%s)
+          sudo timeout 1500 apt-get update \
+            -o Dir::Etc::SourceList=/dev/null \
+            -o Dir::Etc::SourceParts=/tmp/sources.list.d \
+            -o Dir::State::Lists="$lists" 2>&1 | tail -25 || true
+          echo "STOCK_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Fail-fast config, same hanging primary
+        run: |
+          lists=$(mktemp -d); mkdir -p "$lists/partial"
+          start=$(date +%s)
+          sudo timeout 300 apt-get update \
+            -o Dir::Etc::SourceList=/dev/null \
+            -o Dir::Etc::SourceParts=/tmp/sources.list.d \
+            -o Dir::State::Lists="$lists" \
+            -o Acquire::Retries=1 \
+            -o Acquire::http::Timeout=15 \
+            -o Acquire::https::Timeout=15 2>&1 | tail -25 || true
+          echo "FAILFAST_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+        env:
+          DEBIAN_FRONTEND: noninteractive
