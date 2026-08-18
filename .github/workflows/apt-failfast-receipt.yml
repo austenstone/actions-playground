@@ -1,0 +1,39 @@
+name: apt fail-fast receipt
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  receipt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Blackhole priority:1 mirror, keep healthy priority:2
+        run: |
+          set -euo pipefail
+          sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+          mkdir -p /tmp/sources.list.d
+          sudo cp /etc/apt/sources.list.d/ubuntu.sources /tmp/sources.list.d/ubuntu.sources
+          printf 'http://192.0.2.1/ubuntu/\tpriority:1\nhttps://archive.ubuntu.com/ubuntu/\tpriority:2\n' \
+            | sudo tee /tmp/test-mirrors.txt >/dev/null
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|mirror+file:/tmp/test-mirrors.txt|' \
+            /tmp/sources.list.d/ubuntu.sources
+
+      - name: apt-get update with Acquire::Retries=0
+        run: |
+          set +e
+          lists=$(mktemp -d); mkdir -p "$lists/partial"
+          start=$(date +%s)
+          sudo apt-get update \
+            -o Dir::Etc::SourceList=/dev/null \
+            -o Dir::Etc::SourceParts=/tmp/sources.list.d \
+            -o Dir::State::Lists="$lists" \
+            -o Acquire::Retries=0 \
+            -o Acquire::http::Timeout=5 \
+            -o Acquire::https::Timeout=5 2>&1 | tee /tmp/out.log
+          rc=${PIPESTATUS[0]}
+          echo "ELAPSED=$(( $(date +%s) - start ))s RC=$rc"
+          echo "INDEX_FILES_FETCHED=$(find "$lists" -type f ! -name lock | wc -l)"
