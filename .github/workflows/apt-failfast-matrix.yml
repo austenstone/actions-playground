@@ -1,0 +1,112 @@
+name: apt fail-fast config matrix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  variant:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 1-stock
+            mode: mirrorlist
+            opts: ""
+            cap: "2400"
+          - name: 2-retries1-timeout15
+            mode: mirrorlist
+            opts: "-o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
+            cap: "2400"
+          - name: 3-retries0-timeout5
+            mode: mirrorlist
+            opts: "-o Acquire::Retries=0 -o Acquire::http::Timeout=5 -o Acquire::https::Timeout=5"
+            cap: "2400"
+          - name: 4-retries0-timeout3-ipv4
+            mode: mirrorlist
+            opts: "-o Acquire::Retries=0 -o Acquire::http::Timeout=3 -o Acquire::https::Timeout=3 -o Acquire::ForceIPv4=true"
+            cap: "2400"
+          - name: 5-pinned-no-mirrorlist
+            mode: pinned
+            opts: "-o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
+            cap: "2400"
+          - name: 6-healthy-baseline
+            mode: healthy
+            opts: ""
+            cap: "2400"
+    steps:
+      - name: Build sources for mode
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/sources.list.d
+          sudo cp /etc/apt/sources.list.d/ubuntu.sources /tmp/sources.list.d/ubuntu.sources
+
+          case "$MODE" in
+            mirrorlist)
+              # blackholed primary + healthy fallback, mirrors the shipped shape
+              sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+              printf 'http://192.0.2.1/ubuntu/\tpriority:1\nhttps://archive.ubuntu.com/ubuntu/\tpriority:2\n' \
+                | sudo tee /tmp/test-mirrors.txt >/dev/null
+              sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|mirror+file:/tmp/test-mirrors.txt|' \
+                /tmp/sources.list.d/ubuntu.sources
+              ;;
+            pinned)
+              # same blackhole present, but sources bypass the mirrorlist entirely
+              sudo iptables -A OUTPUT -d 192.0.2.1 -j DROP
+              sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|https://archive.ubuntu.com/ubuntu/|' \
+                /tmp/sources.list.d/ubuntu.sources
+              ;;
+            healthy)
+              # control: no blackhole at all, mirrorlist pointed at real archive
+              sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|https://archive.ubuntu.com/ubuntu/|' \
+                /tmp/sources.list.d/ubuntu.sources
+              ;;
+          esac
+          echo "--- effective sources ---"
+          cat /tmp/sources.list.d/ubuntu.sources
+
+      - name: Measure
+        env:
+          OPTS: ${{ matrix.opts }}
+          CAP: ${{ matrix.cap }}
+          VARIANT: ${{ matrix.name }}
+        run: |
+          set +e
+          lists=$(mktemp -d); mkdir -p "$lists/partial"
+          start=$(date +%s)
+          # shellcheck disable=SC2086
+          sudo timeout "$CAP" apt-get update \
+            -o Dir::Etc::SourceList=/dev/null \
+            -o Dir::Etc::SourceParts=/tmp/sources.list.d \
+            -o Dir::State::Lists="$lists" \
+            $OPTS >/tmp/out.log 2>&1
+          rc=$?
+          elapsed=$(( $(date +%s) - start ))
+          set -e
+
+          if [ "$rc" -eq 124 ]; then
+            verdict="KILLED_AT_CAP"
+          elif [ "$rc" -eq 0 ]; then
+            verdict="COMPLETED_OK"
+          else
+            verdict="COMPLETED_RC_${rc}"
+          fi
+
+          echo "RESULT $VARIANT elapsed=${elapsed}s verdict=$verdict"
+          {
+            echo "### $VARIANT"
+            echo ""
+            echo "- elapsed: **${elapsed}s**"
+            echo "- verdict: **$verdict**"
+            echo ""
+            echo '```'
+            tail -15 /tmp/out.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
