@@ -35,8 +35,10 @@ jobs:
             | jq -r '.value')
 
           # NEVER print the token. Decode and show only the claims.
-          claims=$(echo "$token" | cut -d. -f2 | base64 -d 2>/dev/null || \
-                   echo "$token" | cut -d. -f2 | base64 -d --ignore-garbage 2>/dev/null)
+          # A JWT payload is base64url: '-_' instead of '+/', and no '=' padding.
+          payload=$(echo "$token" | cut -d. -f2 | tr '_-' '/+')
+          while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="${payload}="; done
+          claims=$(echo "$payload" | base64 -d)
 
           echo "::group::OIDC claims presented to the cloud"
           echo "$claims" | jq '{iss, aud, sub, repository, repository_owner,
