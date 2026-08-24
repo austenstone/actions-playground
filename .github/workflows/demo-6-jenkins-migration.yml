@@ -108,9 +108,13 @@ jobs:
           echo ""
 
       - name: Install GitHub Actions Importer
-        run: gh extension install github/gh-actions-importer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh extension install github/gh-actions-importer
+          # The Importer ships as a container; pull it before use.
+          gh actions-importer update
+          gh actions-importer version
 
       # STEP 1 of the real migration story: score the estate before committing.
       - name: Audit the Jenkins estate
