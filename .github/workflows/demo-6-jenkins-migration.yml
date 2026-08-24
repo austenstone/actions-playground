@@ -1,11 +1,14 @@
 # DEMO 6 — Migrating from Jenkins with GitHub Actions Importer
 #
 # Narration target (Blake, DevOps): you do not hand-rewrite hundreds of
-# pipelines. The Importer reads your existing Jenkins pipeline and produces a
-# working GitHub Actions workflow, plus a report telling you exactly how much
-# of the estate converts automatically.
+# pipelines. The Importer reads your existing Jenkins server, scores the whole
+# estate for how much converts automatically, and generates working GitHub
+# Actions workflows.
 #
-# Self-contained: converts the Jenkinsfile in this repo — no Jenkins server needed.
+# This stands up a REAL Jenkins, loads the repo's Jenkinsfile into it as a real
+# pipeline job, and points the Importer at it. The Importer talks to a live
+# Jenkins over its API — there is no offline "convert this file" mode — so any
+# demo that claims to convert a bare Jenkinsfile is not exercising the real tool.
 
 name: 'Demo 6 · Migrate from Jenkins'
 
@@ -17,6 +20,11 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # The Importer runs as a container, so it reaches Jenkins on the runner host
+  # via the docker bridge gateway rather than localhost.
+  JENKINS_FROM_IMPORTER: http://172.17.0.1:8080
 
 jobs:
   migrate:
@@ -35,55 +43,136 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat Jenkinsfile
 
+      - name: Stand up a real Jenkins
+        run: |
+          docker run -d --name jenkins --network host \
+            -e JAVA_OPTS="-Djenkins.install.runSetupWizard=false" \
+            jenkins/jenkins:lts-jdk17
+
+          # /login answers 200 while Jenkins is still booting; /api/json does not.
+          echo "Waiting for Jenkins..."
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:8080/api/json; then
+              echo "Jenkins ready after $((i * 5))s"
+              break
+            fi
+            sleep 5
+          done
+          curl -sf -o /dev/null http://localhost:8080/api/json
+
+      - name: Install the pipeline plugins
+        run: |
+          docker exec jenkins jenkins-plugin-cli --plugins workflow-aggregator:latest
+          docker restart jenkins
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:8080/api/json; then
+              echo "Jenkins ready after restart"
+              break
+            fi
+            sleep 5
+          done
+          curl -sf -o /dev/null http://localhost:8080/api/json
+
+      - name: Load our Jenkinsfile into Jenkins as a real job
+        run: |
+          # XML-escape the Jenkinsfile so it can be embedded in the job config.
+          script=$(python3 -c "import html; print(html.escape(open('Jenkinsfile').read()))")
+
+          cat > config.xml <<XMLEOF
+          <?xml version='1.1' encoding='UTF-8'?>
+          <flow-definition plugin="workflow-job">
+            <description>Demo pipeline for Tech Sales Pro 201</description>
+            <keepDependencies>false</keepDependencies>
+            <properties/>
+            <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+              <script>${script}</script>
+              <sandbox>true</sandbox>
+            </definition>
+            <triggers/>
+            <disabled>false</disabled>
+          </flow-definition>
+          XMLEOF
+
+          # Jenkins requires a CSRF crumb on POST, tied to the session cookie.
+          crumb=$(curl -sf -c /tmp/jc.txt \
+            'http://localhost:8080/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)')
+
+          curl -sf -b /tmp/jc.txt \
+            -X POST "http://localhost:8080/createItem?name=demo-pipeline" \
+            -H "Content-Type: application/xml" \
+            -H "${crumb%%:*}: ${crumb#*:}" \
+            --data-binary @config.xml
+
+          echo "Jenkins now hosts:"
+          curl -sf "http://localhost:8080/job/demo-pipeline/api/json?tree=name,description"
+          echo ""
+
       - name: Install GitHub Actions Importer
         run: gh extension install github/gh-actions-importer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # STEP 1 of the real migration story: score the estate before committing.
+      - name: Audit the Jenkins estate
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_INSTANCE_URL: ${{ github.server_url }}
+        run: |
+          gh actions-importer audit jenkins \
+            --jenkins-instance-url "$JENKINS_FROM_IMPORTER" \
+            --jenkins-username demo \
+            --jenkins-access-token demo \
+            --output-dir ./audit
+
+      # STEP 2: convert one pipeline so you can eyeball the output.
       - name: Convert the pipeline
-        id: convert
-        continue-on-error: true
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_INSTANCE_URL: ${{ github.server_url }}
         run: |
           gh actions-importer dry-run jenkins \
-            --source-file-path ./Jenkinsfile \
+            --source-url "$JENKINS_FROM_IMPORTER/job/demo-pipeline" \
+            --jenkins-instance-url "$JENKINS_FROM_IMPORTER" \
+            --jenkins-username demo \
+            --jenkins-access-token demo \
             --output-dir ./migration
 
       - name: Show what came out
         run: |
-          converted=$(find ./migration -name '*.yml' -o -name '*.yaml' 2>/dev/null | head -1)
+          converted=$(find ./migration -name '*.yml' -o -name '*.yaml' | head -1)
+          test -n "$converted" || { echo "::error::Importer produced no workflow"; exit 1; }
+
           {
             echo ""
-            echo "### After — generated GitHub Actions workflow"
-            if [ -n "$converted" ]; then
-              echo '```yaml'
-              cat "$converted"
-              echo '```'
-            else
-              echo "_Importer output unavailable in this environment._"
-              echo "_Run \`gh actions-importer audit jenkins\` against a live Jenkins"
-              echo "instance to get the full estate-wide conversion report._"
-            fi
+            echo "### After — generated by GitHub Actions Importer"
+            echo '```yaml'
+            cat "$converted"
+            echo '```'
             echo ""
-            echo "### Why this matters"
+            echo "### The migration report"
+            echo ""
+            sed -n '/## Pipelines/,/### Successful/p' ./audit/audit_summary.md
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| \`audit\` | Scores your **entire** Jenkins estate for conversion rate before you commit |"
+            echo "| \`audit\` | Scores your **entire** Jenkins estate before you commit to anything |"
             echo "| \`dry-run\` | Converts one pipeline so you can eyeball the output |"
             echo "| \`migrate\` | Opens a **pull request** with the converted workflow |"
             echo ""
             echo "The migration lands as a PR — reviewed like any other change."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload the converted workflow
+          echo "=== Converted workflow ==="
+          cat "$converted"
+
+      - name: Upload the migration output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: migrated-workflow
-          path: ./migration
+          name: migration-output
+          path: |
+            ./migration
+            ./audit
           if-no-files-found: ignore
           retention-days: 1
 
