@@ -22,6 +22,11 @@ jobs:
   ci:
     name: CI
     uses: ./.github/workflows/demo-7-golden-path.yml
+    # A called workflow can never hold more permission than its caller grants.
+    # Scoped here rather than workflow-wide so the `report` job stays read-only.
+    permissions:
+      contents: read
+      security-events: write
     with:
       language: node
       runner: ubuntu-latest

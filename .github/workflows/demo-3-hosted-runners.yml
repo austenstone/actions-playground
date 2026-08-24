@@ -11,6 +11,9 @@ name: 'Demo 3 · Hosted vs. Self-Hosted Runners'
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/demo-3-hosted-runners.yml'
 
 permissions:
   contents: read

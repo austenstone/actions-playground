@@ -9,6 +9,9 @@ name: 'Demo 5 · Secretless Deployment with OIDC'
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/demo-5-oidc.yml'
 
 # Least privilege: `id-token: write` is granted per job, only where a token is
 # actually requested. Without it, no token is issued at all.

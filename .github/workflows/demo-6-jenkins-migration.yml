@@ -11,6 +11,9 @@ name: 'Demo 6 · Migrate from Jenkins'
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/demo-6-jenkins-migration.yml'
 
 permissions:
   contents: read

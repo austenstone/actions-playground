@@ -17,12 +17,18 @@ on:
         type: choice
         default: '512'
         options: ['256', '512', '1024']
+  pull_request:
+    paths:
+      - '.github/workflows/demo-4-larger-runners.yml'
 
 permissions:
   contents: read
 
 jobs:
   build:
+    # Larger runners are an org/enterprise feature. On a personal Pro account
+    # these labels queue forever, so this only runs where the capacity exists.
+    if: github.repository_owner == 'octodemo' || github.event_name == 'workflow_dispatch'
     # The ONLY difference between these jobs is the `runs-on` label.
     name: ${{ matrix.label }} (${{ matrix.cores }} cores)
     runs-on: ${{ matrix.runs-on }}
