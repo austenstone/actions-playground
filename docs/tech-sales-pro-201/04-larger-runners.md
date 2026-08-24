@@ -38,7 +38,9 @@ This workflow runs the identical job across all of them so we can compare.
 ## [SCREEN] Highlight the workload steps
 
 The work is a fixed, parallelisable compression job — same input every time, and
-it can actually use the cores it is given. That last part matters: a job that
+it can actually use the cores it is given. That last part matters more than it
+sounds. The first version of this demo capped itself at eight threads by accident,
+and the thirty-two core runner came out no faster than the eight. A job that
 cannot parallelise will not get faster on a bigger machine, and you should say so
 before someone tries it and is disappointed.
 
@@ -48,22 +50,39 @@ Here is the result.
 
 ## [SCREEN] Walk down the durations
 
-The wall clock drops as the cores go up. Not linearly — nothing is — but
-substantially.
+Eighty-five seconds on two cores. Nineteen on eight. Five on thirty-two.
 
 ## [SCREEN] Open the job summary with the time-and-cost table
 
-And here is the part that surprises people. The bigger machines cost more per
-minute, but they run for fewer minutes. Look at the cost-per-run column.
+Now the money. The rate card is sub-linear — a thirty-two core runner is sixteen
+times the machine but not sixteen times the price — and the faster machines run
+for fewer minutes, so the two effects push against each other.
 
 ## [SCREEN] Point at the cost column
 
-It is close to flat. Sometimes it is genuinely cheaper. You are paying per
-minute, so cutting the minutes offsets the higher rate.
+A cent and a bit, two cents, eight cents. Seventeen times faster for about seven
+cents more per run.
+
+## [SCREEN] Stay on the table, point at the 32-core row
+
+But look closely at that last row, because this is the part worth teaching. The
+job took five seconds. It billed a full minute. GitHub rounds every job up to the
+whole minute, so past a certain point you stop buying speed and start buying
+rounding.
+
+## [SCREEN] Point back at the 8-core row
+
+Eight cores is the sweet spot here. Four and a half times faster for less than
+double the cost. Thirty-two gets you fourteen more seconds and triples the bill.
+
+So the honest recommendation is not "buy the biggest one." It is "measure, then
+pick." The demo you just watched is the measurement, and it is one line of YAML
+to run it against your own build.
 
 ## [SCREEN] Stay on the table
 
-Which means the real comparison is not the invoice. It is Jordan's team.
+And when you do that comparison, the invoice is not the interesting number
+anyway. Jordan's team is.
 
 If a build goes from twenty minutes to six, every engineer waiting on it gets
 fourteen minutes back, every time. Multiply by the number of pull requests per
