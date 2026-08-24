@@ -1,0 +1,99 @@
+# DEMO 2 — CI on a pull request
+#
+# Narration target (Dara, the developer): open a PR, and everything below happens
+# automatically. Build + test + status checks report inline on the PR, on
+# fully-managed GitHub-hosted compute the developer never had to think about.
+
+name: 'Demo 2 · CI on a Pull Request'
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'demo-app/**'
+      - '.github/workflows/demo-2-pr-ci.yml'
+
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the previous run — no wasted compute.
+concurrency:
+  group: demo-2-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: demo-app
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: demo-app/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    # Three Node versions, three machines, all at the same time.
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: demo-app/package-lock.json
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm test
+
+      - name: Publish coverage to the run summary
+        if: always()
+        run: |
+          {
+            echo "### Node ${{ matrix.node }}"
+            if [ -f coverage/coverage-summary.json ]; then
+              node -e '
+                const t = require("./coverage/coverage-summary.json").total;
+                console.log("| Metric | Covered |");
+                console.log("|---|---|");
+                for (const k of ["lines","statements","functions","branches"]) {
+                  console.log(`| ${k} | ${t[k].pct}% |`);
+                }
+              '
+            else
+              echo "_No coverage report produced._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]   # only build once quality gates pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: demo-app/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-app-dist
+          path: demo-app/dist
+          if-no-files-found: ignore
+          retention-days: 1

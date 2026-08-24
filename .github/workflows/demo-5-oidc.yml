@@ -1,0 +1,96 @@
+# DEMO 5 — Secretless deployment with OIDC
+#
+# Narration target (Priya, security & compliance): there is no cloud credential
+# stored in this repository. The runner proves its identity to the cloud with a
+# short-lived, cryptographically-signed token scoped to this exact repo, branch
+# and workflow. Nothing to leak, nothing to rotate, nothing to exfiltrate.
+
+name: 'Demo 5 · Secretless Deployment with OIDC'
+
+on:
+  workflow_dispatch:
+
+# Least privilege: `id-token: write` is granted per job, only where a token is
+# actually requested. Without it, no token is issued at all.
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    name: What the cloud actually sees
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Request an OIDC token and inspect its claims
+        run: |
+          # Ask the Actions token service for a token addressed to a cloud audience.
+          token=$(curl -sS \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" \
+            | jq -r '.value')
+
+          # NEVER print the token. Decode and show only the claims.
+          claims=$(echo "$token" | cut -d. -f2 | base64 -d 2>/dev/null || \
+                   echo "$token" | cut -d. -f2 | base64 -d --ignore-garbage 2>/dev/null)
+
+          echo "::group::OIDC claims presented to the cloud"
+          echo "$claims" | jq '{iss, aud, sub, repository, repository_owner,
+                                ref, workflow, job_workflow_ref, runner_environment,
+                                issued: (.iat|todate), expires: (.exp|todate)}'
+          echo "::endgroup::"
+
+          {
+            echo "### The identity presented to the cloud"
+            echo ""
+            echo '```json'
+            echo "$claims" | jq '{iss, aud, sub, repository, ref, workflow,
+                                  runner_environment, expires: (.exp|todate)}'
+            echo '```'
+            echo ""
+            echo "| Property | Value |"
+            echo "|---|---|"
+            echo "| Issued by | GitHub (\`token.actions.githubusercontent.com\`) |"
+            echo "| Bound to | this repo **and** this branch **and** this workflow |"
+            echo "| Lifetime | minutes — expires before this video ends |"
+            echo "| Stored in the repo | **nothing** |"
+            echo ""
+            echo "Trust is configured **once** on the cloud side."
+            echo "A fork, a different branch, or a different workflow gets a different"
+            echo "\`sub\` claim — and the cloud refuses it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prove there are no long-lived cloud credentials here
+        run: |
+          {
+            echo ""
+            echo "### Before and after"
+            echo ""
+            echo "| | Stored secrets | Rotation | Blast radius if leaked |"
+            echo "|---|---|---|---|"
+            echo "| Access keys | Yes, long-lived | Manual, forgotten | Whole account, indefinitely |"
+            echo "| **OIDC** | **None** | **Automatic, per job** | **Expired minutes later** |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Real login (runs when cloud trust is configured)
+    runs-on: ubuntu-latest
+    needs: identity
+    permissions:
+      id-token: write
+      contents: read
+    # Only attempts a real login where the trust relationship exists.
+    if: vars.AZURE_CLIENT_ID != ''
+    steps:
+      - name: Sign in to Azure with no secret
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Do something only an authorised identity could do
+        run: |
+          az account show --output table
+          echo "Authenticated with zero stored credentials."

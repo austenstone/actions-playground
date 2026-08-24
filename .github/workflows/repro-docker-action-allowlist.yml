@@ -1,11 +1,11 @@
 name: Repro Docker Action Allowlist
 
-# Reproduces github/actions-sales support thread (a customer / a customer's EMU):
-# docker:// container actions get "action not allowed" under the Actions allowlist
-# policy, specifically on fork PR runs. This workflow runs the SAME docker action
-# references so we can flip the org allowlist policy and observe access control.
+# Reproduces a reported issue where docker:// container actions get
+# "action not allowed" under the Actions allowlist policy, specifically on fork
+# PR runs. This workflow runs the SAME docker action references so we can flip
+# the org allowlist policy and observe access control.
 #
-# Customer-reported blocked references:
+# Reported blocked references:
 #   docker://ghcr.io/wolfi-dev/sdk:latest@sha256:ab0a3520b29f737b1219bb744f282e3e28bb55c889bc89e5a289f8a5e9380678
 #   docker://ghcr.io/wolfi-dev/sdk@sha256:51b308ba1e59bc6a33532e4eb4007d0e328103f1c6e4130e1220225e01b5b9e1
 

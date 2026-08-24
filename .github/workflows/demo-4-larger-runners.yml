@@ -1,0 +1,89 @@
+# DEMO 4 — Larger runners for faster builds
+#
+# Narration target (Jordan, the engineering manager): the same job, unchanged,
+# on a bigger machine. One line of YAML. Minutes back on every build, for every
+# engineer, every day.
+#
+# ⚠ FILM THIS IN octodemo/actions-playground — larger runner labels are an
+#   org/Team+ feature and will queue forever on a personal Pro account.
+
+name: 'Demo 4 · Larger Runners'
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload_mb:
+        description: 'Size of the workload in MB (bigger = clearer gap)'
+        type: choice
+        default: '512'
+        options: ['256', '512', '1024']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # The ONLY difference between these jobs is the `runs-on` label.
+    name: ${{ matrix.label }} (${{ matrix.cores }} cores)
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            label: Standard
+            cores: 2
+            per_min: 0.008
+          - runs-on: 8-core
+            label: Larger
+            cores: 8
+            per_min: 0.032
+          - runs-on: 32-core
+            label: Largest
+            cores: 32
+            per_min: 0.128
+
+    steps:
+      - name: Confirm the machine we actually got
+        run: |
+          echo "Label requested : ${{ matrix.runs-on }}"
+          echo "Cores available : $(nproc)"
+          echo "Memory          : $(free -h | awk '/^Mem:/ {print $2}')"
+
+      - name: Generate a fixed, CPU-bound workload
+        env:
+          PAYLOAD_MB: ${{ inputs.payload_mb || '512' }}
+        run: |
+          # Same bytes on every runner, so the only variable is core count.
+          dd if=/dev/urandom of=payload.bin bs=1M count="$PAYLOAD_MB" status=none
+          echo "Workload: ${PAYLOAD_MB}MB"
+
+      - name: Run the heavy job
+        id: heavy
+        run: |
+          start=$(date +%s)
+          # Compression parallelises across every available core.
+          xz -9 -T0 -c payload.bin > /dev/null
+          end=$(date +%s)
+          echo "elapsed=$((end - start))" >> "$GITHUB_OUTPUT"
+          echo "Elapsed: $((end - start))s on $(nproc) cores"
+
+      - name: Report time and cost
+        env:
+          ELAPSED: ${{ steps.heavy.outputs.elapsed }}
+          PER_MIN: ${{ matrix.per_min }}
+        run: |
+          cost=$(awk -v s="$ELAPSED" -v p="$PER_MIN" 'BEGIN{printf "%.4f", (s/60)*p}')
+          {
+            echo "### ${{ matrix.label }} — \`${{ matrix.runs-on }}\`"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Cores | $(nproc) |"
+            echo "| Wall clock | **${ELAPSED}s** |"
+            echo "| Rate | \$${PER_MIN}/min |"
+            echo "| Cost of this run | \$${cost} |"
+            echo ""
+            echo "_Faster **and** often cheaper: you pay per minute, and there are fewer minutes._"
+          } >> "$GITHUB_STEP_SUMMARY"

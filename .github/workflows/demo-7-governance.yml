@@ -1,0 +1,60 @@
+# DEMO 7 (caller) — what an application team writes
+#
+# Narration target (Sandra): this is the ENTIRE CI file for a product repo.
+# Eight lines. The team gets security scanning, the approved runner, and
+# compliance evidence for free — and cannot turn them off.
+#
+# Multiply by 500 repositories. That is the governance story.
+
+name: 'Demo 7 · Governance in Practice'
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/demo-7-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  # ── This is all an application team writes ──
+  ci:
+    name: CI
+    uses: ./.github/workflows/demo-7-golden-path.yml
+    with:
+      language: node
+      runner: ubuntu-latest
+      working-directory: demo-app
+
+  # ── Show the evidence flowing back to the calling repo ──
+  report:
+    name: Evidence returned to the calling repo
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Show what the platform team can audit
+        env:
+          ATTESTATION: ${{ needs.ci.outputs.attestation }}
+        run: |
+          echo "Attestation: $ATTESTATION"
+          {
+            echo "### What this repo had to write"
+            echo ""
+            echo '```yaml'
+            echo "jobs:"
+            echo "  ci:"
+            echo "    uses: my-org/.github/.github/workflows/golden-path.yml@v1"
+            echo "    with:"
+            echo "      language: node"
+            echo '```'
+            echo ""
+            echo "### What it got"
+            echo ""
+            echo "- Mandatory security scanning"
+            echo "- An approved, GitHub-hosted runner"
+            echo "- A standard build and test contract"
+            echo "- Machine-readable compliance evidence: \`$ATTESTATION\`"
+            echo ""
+            echo "Update the golden path once, and **every** repo picks it up on its next run."
+          } >> "$GITHUB_STEP_SUMMARY"

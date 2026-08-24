@@ -1,0 +1,92 @@
+# DEMO 3 — Hosted vs. self-hosted runners  ★ THE COMMERCIAL CENTERPIECE ★
+#
+# Narration target (Sandra the platform admin, Blake the DevOps engineer):
+# every job gets a brand-new, fully-patched, pre-loaded machine that GitHub
+# builds, secures, scales and throws away. Nobody on the customer's team
+# patches it, images it, scales it, or cleans it up.
+#
+# Pair this workflow with the Settings → Actions → Runners page on screen.
+
+name: 'Demo 3 · Hosted vs. Self-Hosted Runners'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Two identical jobs. Different machines. That is the entire point.
+  identity:
+    name: Machine ${{ matrix.n }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        n: [1, 2]
+    steps:
+      - name: Who is this machine?
+        run: |
+          echo "Runner name : $RUNNER_NAME"
+          echo "Hostname    : $(hostname)"
+          echo "Machine ID  : $(cat /etc/machine-id)"
+          echo "Booted      : $(uptime -s)"
+          echo "Image       : ${ImageOS:-?} ${ImageVersion:-?}"
+
+      - name: Prove there is no leftover state
+        run: |
+          if [ -e /tmp/demo-leftover ]; then
+            echo "::error::Found state from a previous run — this is NOT ephemeral"
+          else
+            echo "Clean machine: no artifacts from any previous job."
+          fi
+          touch /tmp/demo-leftover
+          echo "Wrote /tmp/demo-leftover — it dies with this machine."
+
+      - name: Record identity for comparison
+        run: |
+          {
+            echo "machine_${{ matrix.n }}_id=$(cat /etc/machine-id)"
+            echo "machine_${{ matrix.n }}_host=$(hostname)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  preinstalled:
+    name: What GitHub pre-installs for you
+    runs-on: ubuntu-latest
+    steps:
+      - name: Toolchains that are already here
+        run: |
+          {
+            echo "### Pre-installed on every \`ubuntu-latest\` runner"
+            echo ""
+            echo "| Tool | Version |"
+            echo "|---|---|"
+            for t in "node --version" "python3 --version" "go version" \
+                     "java -version" "docker --version" "git --version" \
+                     "aws --version" "az version" "gh --version"; do
+              name="${t%% *}"
+              ver="$($t 2>&1 | head -1 || echo 'n/a')"
+              echo "| \`$name\` | ${ver} |"
+            done
+            echo ""
+            echo "Hosted tool cache: **$(du -sh "$AGENT_TOOLSDIRECTORY" 2>/dev/null | cut -f1 || echo 'n/a')** of runtimes, pre-warmed."
+            echo ""
+            echo "Nobody on your team installed, patched, or licensed any of this."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: The maintenance you are NOT doing
+        run: |
+          {
+            echo ""
+            echo "### Who does the work?"
+            echo ""
+            echo "| Responsibility | Self-hosted | GitHub-hosted |"
+            echo "|---|---|---|"
+            echo "| Provision capacity | You | GitHub |"
+            echo "| OS patching / CVEs | You | GitHub |"
+            echo "| Build the runner image | You | GitHub |"
+            echo "| Scale up for a busy afternoon | You | GitHub |"
+            echo "| Scale to zero overnight | You | GitHub |"
+            echo "| Clean state between jobs | You | GitHub (new VM) |"
+            echo "| Isolate untrusted / fork PRs | You | GitHub |"
+            echo "| Pay when idle | Yes | **No — per-minute** |"
+          } >> "$GITHUB_STEP_SUMMARY"

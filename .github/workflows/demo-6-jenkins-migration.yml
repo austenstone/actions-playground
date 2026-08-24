@@ -1,0 +1,97 @@
+# DEMO 6 — Migrating from Jenkins with GitHub Actions Importer
+#
+# Narration target (Blake, DevOps): you do not hand-rewrite hundreds of
+# pipelines. The Importer reads your existing Jenkins pipeline and produces a
+# working GitHub Actions workflow, plus a report telling you exactly how much
+# of the estate converts automatically.
+#
+# Self-contained: converts the Jenkinsfile in this repo — no Jenkins server needed.
+
+name: 'Demo 6 · Migrate from Jenkins'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Jenkinsfile ➜ GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show the pipeline we are migrating from
+        run: |
+          {
+            echo "### Before — \`Jenkinsfile\`"
+            echo '```groovy'
+            cat Jenkinsfile
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat Jenkinsfile
+
+      - name: Install GitHub Actions Importer
+        run: gh extension install github/gh-actions-importer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert the pipeline
+        id: convert
+        continue-on-error: true
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_INSTANCE_URL: ${{ github.server_url }}
+        run: |
+          gh actions-importer dry-run jenkins \
+            --source-file-path ./Jenkinsfile \
+            --output-dir ./migration
+
+      - name: Show what came out
+        run: |
+          converted=$(find ./migration -name '*.yml' -o -name '*.yaml' 2>/dev/null | head -1)
+          {
+            echo ""
+            echo "### After — generated GitHub Actions workflow"
+            if [ -n "$converted" ]; then
+              echo '```yaml'
+              cat "$converted"
+              echo '```'
+            else
+              echo "_Importer output unavailable in this environment._"
+              echo "_Run \`gh actions-importer audit jenkins\` against a live Jenkins"
+              echo "instance to get the full estate-wide conversion report._"
+            fi
+            echo ""
+            echo "### Why this matters"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| \`audit\` | Scores your **entire** Jenkins estate for conversion rate before you commit |"
+            echo "| \`dry-run\` | Converts one pipeline so you can eyeball the output |"
+            echo "| \`migrate\` | Opens a **pull request** with the converted workflow |"
+            echo ""
+            echo "The migration lands as a PR — reviewed like any other change."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the converted workflow
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrated-workflow
+          path: ./migration
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # The same pipeline, now native. This is the destination.
+  native:
+    name: The converted workflow, running natively
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        run: echo "Building..."
+      - name: Test
+        run: echo "Running tests..."
+      - name: Deploy
+        run: echo "Deploying application..."

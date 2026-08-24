@@ -1,0 +1,70 @@
+# DEMO 1 — Anatomy of a workflow
+#
+# Narration target: triggers → jobs → steps → where the runner fits.
+# Everything you need to explain a workflow lives in this one file, top to bottom.
+
+name: 'Demo 1 · Anatomy of a Workflow'
+
+# ── 1. TRIGGERS ── "when does this run?"
+on:
+  workflow_dispatch:        # a human clicks "Run workflow"
+  pull_request:             # someone opens or updates a PR
+    paths:
+      - '.github/workflows/demo-1-anatomy.yml'
+
+# ── 2. PERMISSIONS ── the token this run gets, scoped down by default
+permissions:
+  contents: read
+
+jobs:
+  # ── 3. A JOB ── a unit of work that gets its own fresh machine
+  explain:
+    name: One job, one runner
+    # ── 4. THE RUNNER ── GitHub-hosted, created for this job, destroyed after
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 5. STEPS ── run in order, on the same machine, sharing a filesystem
+      - name: Step 1 · Where am I running?
+        run: |
+          echo "Runner OS      : $RUNNER_OS"
+          echo "Runner arch    : $RUNNER_ARCH"
+          echo "Runner name    : $RUNNER_NAME"
+          echo "Image          : ${ImageOS:-unknown} / ${ImageVersion:-unknown}"
+          echo "CPU cores      : $(nproc)"
+          echo "Memory         : $(free -h | awk '/^Mem:/ {print $2}')"
+
+      - name: Step 2 · What triggered me?
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          echo "Event   : $EVENT"
+          echo "Actor   : $ACTOR"
+          echo "Ref     : $REF"
+          echo "Commit  : $SHA"
+
+      - name: Step 3 · Reuse someone else's step
+        uses: actions/checkout@v4
+
+      - name: Step 4 · Steps share state
+        run: |
+          echo "Checked out $(git rev-list --count HEAD) commits into $PWD"
+          ls -1 | head -5
+
+      - name: Step 5 · Report back to the UI
+        run: |
+          {
+            echo "### Anatomy of a workflow"
+            echo ""
+            echo "| Layer | This run |"
+            echo "|---|---|"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+            echo "| Job | \`explain\` |"
+            echo "| Runner | \`ubuntu-latest\` ($(nproc) cores) |"
+            echo "| Steps | 5 |"
+            echo ""
+            echo "The runner is created for this job and destroyed when it ends."
+          } >> "$GITHUB_STEP_SUMMARY"

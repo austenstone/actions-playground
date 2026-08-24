@@ -1,0 +1,106 @@
+# DEMO 7 — Governance with reusable workflows (the callable "golden path")
+#
+# Narration target (Sandra, platform admin): this file is the standard. It is
+# authored once, centrally, by the platform team. Every repository that calls it
+# inherits the security scanning, the approved runner, and the compliance
+# evidence — and cannot silently opt out of them.
+#
+# Publish this in a `.github` or `workflow-templates` repo and reference it as
+#   uses: my-org/.github/.github/workflows/golden-path.yml@v1
+
+name: 'Demo 7 · Golden Path (reusable)'
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: 'Application language'
+        type: string
+        default: 'node'
+      runner:
+        description: 'Approved runner label'
+        type: string
+        default: 'ubuntu-latest'
+      working-directory:
+        type: string
+        default: '.'
+    outputs:
+      attestation:
+        description: 'Compliance evidence for this run'
+        value: ${{ jobs.compliance.outputs.attestation }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Mandatory gate 1: nobody skips security scanning ──
+  security:
+    name: Security scan (mandatory)
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency review
+        run: |
+          echo "Scanning dependencies for known vulnerabilities..."
+          echo "Enforced centrally — a calling repo cannot disable this step."
+
+      - name: Secret scan
+        run: echo "Scanning for committed credentials..."
+
+  # ── Mandatory gate 2: standardised build & test ──
+  build:
+    name: Build & test (${{ inputs.language }})
+    runs-on: ${{ inputs.runner }}
+    needs: security
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: inputs.language == 'node'
+        with:
+          node-version: 20
+
+      - name: Build
+        env:
+          LANGUAGE: ${{ inputs.language }}
+        run: echo "Standard build for $LANGUAGE"
+
+      - name: Test
+        run: echo "Standard test suite"
+
+  # ── Evidence: every run leaves an audit trail ──
+  compliance:
+    name: Compliance attestation
+    runs-on: ${{ inputs.runner }}
+    needs: [security, build]
+    outputs:
+      attestation: ${{ steps.attest.outputs.result }}
+    steps:
+      - name: Record the evidence
+        id: attest
+        env:
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUNNER_LABEL: ${{ inputs.runner }}
+        run: |
+          result="repo=$REPO sha=$SHA scanned=true runner=$RUNNER_LABEL"
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Compliance attestation"
+            echo ""
+            echo "| Control | Status |"
+            echo "|---|---|"
+            echo "| Security scan | ✅ enforced by the golden path |"
+            echo "| Approved runner | ✅ \`$RUNNER_LABEL\` |"
+            echo "| Standard build & test | ✅ |"
+            echo "| Evidence | \`$result\` |"
+            echo ""
+            echo "One workflow. Every repo. Auditable, and impossible to quietly bypass."
+          } >> "$GITHUB_STEP_SUMMARY"
