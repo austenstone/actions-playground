@@ -37,18 +37,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Rates: docs.github.com/billing/reference/actions-runner-pricing
+          # Re-check before filming; these move.
           - runs-on: ubuntu-latest
             label: Standard
             cores: 2
-            per_min: 0.008
+            per_min: 0.006
           - runs-on: 8-core
             label: Larger
             cores: 8
-            per_min: 0.032
+            per_min: 0.022
           - runs-on: 32-core
             label: Largest
             cores: 32
-            per_min: 0.128
+            per_min: 0.082
 
     steps:
       - name: Confirm the machine we actually got
@@ -69,8 +71,11 @@ jobs:
         id: heavy
         run: |
           start=$(date +%s)
-          # Compression parallelises across every available core.
-          xz -9 -T0 -c payload.bin > /dev/null
+          # -T0 = one thread per core. Block size matters: xz -9 defaults to
+          # 64MiB blocks, which caps a 512MB payload at ~8 threads no matter
+          # how many cores exist. 8MiB blocks give ~64 units of work, so the
+          # bigger machines actually get used.
+          xz -9 --block-size=8MiB -T0 -c payload.bin > /dev/null
           end=$(date +%s)
           echo "elapsed=$((end - start))" >> "$GITHUB_OUTPUT"
           echo "Elapsed: $((end - start))s on $(nproc) cores"
@@ -80,7 +85,10 @@ jobs:
           ELAPSED: ${{ steps.heavy.outputs.elapsed }}
           PER_MIN: ${{ matrix.per_min }}
         run: |
-          cost=$(awk -v s="$ELAPSED" -v p="$PER_MIN" 'BEGIN{printf "%.4f", (s/60)*p}')
+          # GitHub bills whole minutes, rounded UP, per job. Bill it the way
+          # the invoice does — fractional minutes would understate short jobs.
+          billed=$(awk -v s="$ELAPSED" 'BEGIN{printf "%d", (s+59)/60}')
+          cost=$(awk -v m="$billed" -v p="$PER_MIN" 'BEGIN{printf "%.3f", m*p}')
           {
             echo "### ${{ matrix.label }} — \`${{ matrix.runs-on }}\`"
             echo ""
@@ -88,8 +96,11 @@ jobs:
             echo "|---|---|"
             echo "| Cores | $(nproc) |"
             echo "| Wall clock | **${ELAPSED}s** |"
+            echo "| Billed minutes | ${billed} (rounded up) |"
             echo "| Rate | \$${PER_MIN}/min |"
             echo "| Cost of this run | \$${cost} |"
             echo ""
-            echo "_Faster **and** often cheaper: you pay per minute, and there are fewer minutes._"
+            echo "_Larger runners price sub-linearly: 32 cores cost 13.7x a 2-core"
+            echo "runner but deliver 16x the cores. The catch is the round-up —"
+            echo "a job that drops under a minute stops getting cheaper._"
           } >> "$GITHUB_STEP_SUMMARY"
