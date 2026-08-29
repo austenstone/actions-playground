@@ -1,14 +1,12 @@
-# DEMO 6 — Migrating from Jenkins with GitHub Actions Importer
+# Migrating from Jenkins with GitHub Actions Importer
 #
-# Narration target (Blake, DevOps): you do not hand-rewrite hundreds of
-# pipelines. The Importer reads your existing Jenkins server, scores the whole
-# estate for how much converts automatically, and generates working GitHub
-# Actions workflows.
+# Stands up a Jenkins server, loads this repository's Jenkinsfile into it as a
+# real pipeline job, then runs the Importer against it: `audit` to score the
+# whole estate for how much converts automatically, `dry-run` to convert a
+# single pipeline and inspect the result.
 #
-# This stands up a REAL Jenkins, loads the repo's Jenkinsfile into it as a real
-# pipeline job, and points the Importer at it. The Importer talks to a live
-# Jenkins over its API — there is no offline "convert this file" mode — so any
-# demo that claims to convert a bare Jenkinsfile is not exercising the real tool.
+# The Importer talks to a live Jenkins over its API. There is no offline
+# "convert this file on disk" mode.
 
 name: 'Demo 6 · Migrate from Jenkins'
 
@@ -81,7 +79,7 @@ jobs:
           cat > config.xml <<XMLEOF
           <?xml version='1.1' encoding='UTF-8'?>
           <flow-definition plugin="workflow-job">
-            <description>Demo pipeline for Tech Sales Pro 201</description>
+            <description>Build, test and deploy the sample application</description>
             <keepDependencies>false</keepDependencies>
             <properties/>
             <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
@@ -116,7 +114,7 @@ jobs:
           gh actions-importer update
           gh actions-importer version
 
-      # STEP 1 of the real migration story: score the estate before committing.
+      # Step 1: score the whole estate before committing to anything.
       - name: Audit the Jenkins estate
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -128,7 +126,7 @@ jobs:
             --jenkins-access-token demo \
             --output-dir ./audit
 
-      # STEP 2: convert one pipeline so you can eyeball the output.
+      # Step 2: convert a single pipeline and inspect the output.
       - name: Convert the pipeline
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}

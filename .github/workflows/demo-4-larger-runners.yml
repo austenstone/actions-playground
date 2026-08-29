@@ -1,11 +1,10 @@
-# DEMO 4 — Larger runners for faster builds
+# Larger runners for faster builds
 #
-# Narration target (Jordan, the engineering manager): the same job, unchanged,
-# on a bigger machine. One line of YAML. Minutes back on every build, for every
-# engineer, every day.
+# The same compression job on 2, 8 and 32 cores. The only thing that differs
+# between the three jobs is the `runs-on` label.
 #
-# ⚠ FILM THIS IN octodemo/actions-playground — larger runner labels are an
-#   org/Team+ feature and will queue forever on a personal Pro account.
+# Larger runner labels require an organization on Team or above; on accounts
+# without them these jobs queue indefinitely.
 
 name: 'Demo 4 · Larger Runners'
 
@@ -26,10 +25,10 @@ permissions:
 
 jobs:
   build:
-    # Larger runners are an org/enterprise feature. On a personal Pro account
-    # these labels queue forever, so this only runs where the capacity exists.
+    # Larger runner labels require an org on Team or above. Elsewhere they
+    # queue indefinitely, so this only runs where the capacity exists.
     if: github.repository_owner == 'octodemo' || github.event_name == 'workflow_dispatch'
-    # The ONLY difference between these jobs is the `runs-on` label.
+    # The only difference between these jobs is the `runs-on` label.
     name: ${{ matrix.label }} (${{ matrix.cores }} cores)
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 30
@@ -38,7 +37,7 @@ jobs:
       matrix:
         include:
           # Rates: docs.github.com/billing/reference/actions-runner-pricing
-          # Re-check before filming; these move.
+          # These change; verify against the docs rather than trusting them here.
           - runs-on: ubuntu-latest
             label: Standard
             cores: 2

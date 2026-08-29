@@ -1,7 +1,7 @@
-# DEMO 1 — Anatomy of a workflow
+# Anatomy of a workflow
 #
-# Narration target: triggers → jobs → steps → where the runner fits.
-# Everything you need to explain a workflow lives in this one file, top to bottom.
+# The four pieces every workflow is built from, in the order they appear:
+# triggers, permissions, jobs, steps.
 
 name: 'Demo 1 · Anatomy of a Workflow'
 

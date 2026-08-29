@@ -110,3 +110,10 @@ And when you do move them, the change is this line.
 
 That is the whole migration for a job that had no special requirement. Which is
 why this conversation is usually worth having.
+
+---
+
+## Recording notes
+
+- Have **Settings → Actions → Runners** open in a second tab. Cutting to it
+  right after the "who maintains this?" beat is what makes the point land.

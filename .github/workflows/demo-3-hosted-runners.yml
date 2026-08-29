@@ -1,11 +1,8 @@
-# DEMO 3 — Hosted vs. self-hosted runners  ★ THE COMMERCIAL CENTERPIECE ★
+# Hosted vs. self-hosted runners
 #
-# Narration target (Sandra the platform admin, Blake the DevOps engineer):
-# every job gets a brand-new, fully-patched, pre-loaded machine that GitHub
-# builds, secures, scales and throws away. Nobody on the customer's team
-# patches it, images it, scales it, or cleans it up.
-#
-# Pair this workflow with the Settings → Actions → Runners page on screen.
+# Two identical jobs. One runs on a GitHub-hosted runner, the other on a
+# self-hosted runner. Same steps, same YAML — the difference is who builds,
+# patches, scales and disposes of the machine underneath.
 
 name: 'Demo 3 · Hosted vs. Self-Hosted Runners'
 

@@ -1,9 +1,8 @@
-# DEMO 5 — Secretless deployment with OIDC
+# Secretless deployment with OIDC
 #
-# Narration target (Priya, security & compliance): there is no cloud credential
-# stored in this repository. The runner proves its identity to the cloud with a
-# short-lived, cryptographically-signed token scoped to this exact repo, branch
-# and workflow. Nothing to leak, nothing to rotate, nothing to exfiltrate.
+# No cloud credential is stored in this repository. The runner requests a
+# short-lived, signed OIDC token scoped to this exact repository, branch and
+# workflow, and exchanges it with the cloud provider for temporary access.
 
 name: 'Demo 5 · Secretless Deployment with OIDC'
 

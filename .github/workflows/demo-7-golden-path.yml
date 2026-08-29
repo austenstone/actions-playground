@@ -1,11 +1,10 @@
-# DEMO 7 — Governance with reusable workflows (the callable "golden path")
+# Golden path — a reusable workflow
 #
-# Narration target (Sandra, platform admin): this file is the standard. It is
-# authored once, centrally, by the platform team. Every repository that calls it
-# inherits the security scanning, the approved runner, and the compliance
-# evidence — and cannot silently opt out of them.
+# Authored once, centrally, by the platform team. Every repository that calls
+# it inherits the security scanning, the approved runner and the compliance
+# evidence, and cannot silently opt out of them.
 #
-# Publish this in a `.github` or `workflow-templates` repo and reference it as
+# In production this lives in a `.github` or `workflow-templates` repository:
 #   uses: my-org/.github/.github/workflows/golden-path.yml@v1
 
 name: 'Demo 7 · Golden Path (reusable)'

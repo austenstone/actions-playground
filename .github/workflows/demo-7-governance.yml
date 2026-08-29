@@ -1,10 +1,8 @@
-# DEMO 7 (caller) — what an application team writes
+# Calling the golden path
 #
-# Narration target (Sandra): this is the ENTIRE CI file for a product repo.
-# Eight lines. The team gets security scanning, the approved runner, and
-# compliance evidence for free — and cannot turn them off.
-#
-# Multiply by 500 repositories. That is the governance story.
+# The entire CI configuration for an application repository. Security scanning,
+# the approved runner and the compliance evidence all come from the reusable
+# workflow this calls, and the team cannot turn them off.
 
 name: 'Demo 7 · Governance in Practice'
 

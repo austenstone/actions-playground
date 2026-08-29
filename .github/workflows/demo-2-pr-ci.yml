@@ -1,8 +1,7 @@
-# DEMO 2 — CI on a pull request
+# CI on a pull request
 #
-# Narration target (Dara, the developer): open a PR, and everything below happens
-# automatically. Build + test + status checks report inline on the PR, on
-# fully-managed GitHub-hosted compute the developer never had to think about.
+# Lint and test run in parallel across a Node matrix; build runs once both
+# pass. Every result reports back to the pull request as a status check.
 
 name: 'Demo 2 · CI on a Pull Request'
 

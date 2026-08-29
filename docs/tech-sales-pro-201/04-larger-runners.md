@@ -104,3 +104,14 @@ Then in the workflow, it is one line.
 
 No procurement, no capacity planning, no machine sitting idle overnight. You are
 renting exactly the minutes you use.
+
+---
+
+## Recording notes
+
+- **Film this in `octodemo/actions-playground`.** Larger runner labels require
+  an organization on Team or above; on a personal account the jobs queue
+  forever and never start.
+- **Re-check the per-minute rates before recording.** They are hardcoded in the
+  workflow matrix and they move. Source:
+  [Actions runner pricing](https://docs.github.com/en/enterprise-cloud@latest/billing/reference/actions-runner-pricing).
