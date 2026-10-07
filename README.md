@@ -1,5 +1,9 @@
 This repository serves as a comprehensive collection of resources and examples designed to help users master GitHub Actions. Whether you are new to CI/CD or an experienced developer, you will find valuable information here to help you learn, implement, and follow best practices for automating your workflows.
 
+# Experiments
+
+- [OpenAI Decisions change-risk router](./docs/decisions-change-risk.md) - A shadow-mode PR classifier that routes additive validation and review jobs from bounded diff predicates.
+
 # Resources
 
 ### ⭐ Important GitHub Resources
