@@ -7,11 +7,11 @@ This experiment uses OpenAI's public-beta [Decisions API](https://developers.ope
 1. `pull_request` or manual dispatch starts the workflow with read-only repository and pull request permissions.
 2. The workflow checks out only [the external router script](../.github/scripts/decisions-change-risk/decisions_change_risk.py) from the pull request's base commit. It never checks out or executes code from the pull request head.
 3. The router reads changed-file metadata and patches through GitHub's pull request files API.
-4. It sends a bounded text input to `POST https://api.openai.com/v1/decisions` with model `gpt-6-luna`.
+4. Pull request runs send the bounded input to public OpenAI `POST https://api.openai.com/v1/decisions` with model `gpt-6-luna`. Trusted manual runs resolve the current staff CAPI origin and use model `gpt-6-luna-decisions`.
 5. Four predicate probabilities are compared with explicit thresholds and exposed as step and job outputs.
 6. Conditional, side-effect-free jobs demonstrate lightweight, full-test, security-review, and deploy-review routes.
 
-Fork pull requests skip classification before fetching the diff because Actions secrets are unavailable. A missing API key, refusal, HTTP failure, malformed response, or absent predicate produces an explicit non-success classifier status and neutral routing outputs. Those conditions do not masquerade as a successful low-risk classification.
+Fork pull requests skip classification before fetching the diff because Actions secrets are unavailable. A missing credential, refusal, endpoint discovery failure, HTTP failure, unexpected model, malformed response, or absent predicate produces an explicit non-success classifier status and neutral routing outputs. Those conditions do not masquerade as a successful low-risk classification.
 
 ## Predicates and thresholds
 
@@ -32,25 +32,41 @@ The prompt treats the diff as untrusted evidence and tells the model not to foll
 
 Repository secrets are available to same-repository pull request workflows. This personal-repository experiment therefore assumes people who can push branches in the repository are trusted not to alter the workflow to expose secrets. For a broader contributor model, put the API key behind an environment with required reviewers or keep the classifier on a separately controlled workflow boundary.
 
-## Setup and data handling
+## Providers and credentials
 
-Create an Actions repository secret named `OPENAI_API_KEY` containing an OpenAI API key authorized for the public Decisions API. No secret is currently configured, so live classification will report `skipped_missing_api_key` until this is done.
+### Automatic pull request runs
 
-The request transmits bounded pull request filenames and patch content to OpenAI. Treat that as an external data transfer and confirm the repository's privacy, retention, residency, and regulatory requirements before enabling the workflow. OpenAI documents Zero Data Retention, HIPAA, and regional processing support for eligible customers, but eligibility and contractual requirements still apply.
+Pull requests use the public OpenAI endpoint and read only `OPENAI_API_KEY`. If that secret is absent, including on forks, the classifier skips before fetching or transmitting the diff. `AUSTEN_PAT` is never referenced by the pull request classifier step.
+
+### Trusted manual staff demo
+
+Manual dispatch from the repository's default branch uses the existing `AUSTEN_PAT` only for GitHub's staff CAPI preview:
+
+1. `GET https://api.github.com/copilot_internal/user` resolves `.endpoints.api`.
+2. The script accepts only an HTTPS origin on `githubcopilot.com` or a subdomain.
+3. It posts to `<origin>/v1/decisions` with model `gpt-6-luna-decisions`, `Copilot-Integration-Id: copilot-developer-app`, and `Editor-Version: CopilotCLI/1.0`.
+
+The secret is scoped to the staff classifier step, which runs only for `workflow_dispatch` on the default branch. A dispatch from another ref fails before the staff step. The workflow never prints the token and does not use it to fetch pull request data.
+
+This path is **staff/internal experimentation only**, not a public integration pattern. It relies on an existing personal PAT because the preview currently requires Copilot staff authentication. Do not create or recommend a long-lived PAT for production use; prefer a product-supported short-lived or workload identity when one exists.
+
+## Data handling
+
+The request transmits bounded pull request filenames and patch content to the selected provider. Treat that as an external data transfer and confirm the repository's privacy, retention, residency, and regulatory requirements before enabling the workflow. OpenAI documents Zero Data Retention, HIPAA, and regional processing support for eligible public-API customers, but eligibility and contractual requirements still apply.
 
 The Decisions API is public beta. OpenAI describes it as roughly 10x faster than the Responses API, but availability, schemas, latency, and calibration may change before general availability.
 
 ## Cost
 
-`gpt-6-luna` Decisions pricing is input-only at $0.10 per 1 million tokens. A 60,000-character cap is roughly 15,000 tokens for typical source text, or about $0.0015 at the cap, plus the small question prompt. Actual tokenization varies. The job summary reports API latency, input tokens, and an estimated per-request cost from the response usage.
+Public `gpt-6-luna` Decisions pricing is input-only at $0.10 per 1 million tokens. A 60,000-character cap is roughly 15,000 tokens for typical source text, or about $0.0015 at the cap, plus the small question prompt. Actual tokenization varies. The job summary reports provider, model, API latency, input tokens, output tokens, and an estimated public-API cost. It does not estimate internal staff CAPI cost.
 
 ## Run it
 
-Automatic runs occur for pull requests when they are opened, synchronized, or reopened. To test a specific pull request manually:
+Automatic public-OpenAI runs occur for pull requests when they are opened, synchronized, or reopened. To run the trusted staff CAPI demo against a specific pull request:
 
 1. Open **Actions** and select **OpenAI Decisions change-risk experiment**.
 2. Choose **Run workflow**.
-3. Enter the pull request number and run it from a branch containing the workflow.
+3. Enter the pull request number and select the repository's default branch.
 4. Inspect the classifier job summary and the conditional demo jobs.
 
 For deterministic local validation without an API key:

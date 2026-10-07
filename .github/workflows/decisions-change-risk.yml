@@ -37,17 +37,31 @@ jobs:
       - name: Run deterministic baseline tests
         run: python3 -m unittest discover -s .github/scripts/decisions-change-risk -p 'test_*.py'
 
-  classify-change-risk:
-    name: Classify change risk
+  reject-untrusted-dispatch:
+    name: Reject non-default manual dispatch
+    if: github.event_name == 'workflow_dispatch' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Require the default branch
+        run: |
+          echo "::error::Staff CAPI dispatches must run from the default branch."
+          exit 1
+
+  classify-public:
+    name: Classify change risk (public OpenAI)
     needs: baseline-validation
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-slim
     timeout-minutes: 5
     outputs:
       classification-available: ${{ steps.classify.outputs.classification-available }}
       classification-status: ${{ steps.classify.outputs.classification-status }}
+      provider: ${{ steps.classify.outputs.provider }}
       model: ${{ steps.classify.outputs.model }}
       latency-ms: ${{ steps.classify.outputs.latency-ms }}
       input-tokens: ${{ steps.classify.outputs.input-tokens }}
+      output-tokens: ${{ steps.classify.outputs.output-tokens }}
       files-considered: ${{ steps.classify.outputs.files-considered }}
       diff-truncated: ${{ steps.classify.outputs.diff-truncated }}
       security-sensitive: ${{ steps.classify.outputs.security-sensitive }}
@@ -71,10 +85,62 @@ jobs:
         id: classify
         env:
           DECISIONS_GITHUB_TOKEN: ${{ github.token }}
-          DECISIONS_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DECISIONS_API_TOKEN: ${{ secrets.OPENAI_API_KEY }}
+          DECISIONS_CREDENTIAL_NAME: OPENAI_API_KEY
+          DECISIONS_PROVIDER: openai
           DECISIONS_REPOSITORY: ${{ github.repository }}
-          DECISIONS_PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          DECISIONS_PR_NUMBER: ${{ github.event.pull_request.number }}
           DECISIONS_SKIP_REASON: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'Fork pull request: repository secrets are unavailable by design.' || '' }}"
+          DECISIONS_MAX_DIFF_CHARACTERS: '60000'
+          DECISIONS_MAX_FILES: '100'
+          DECISIONS_SECURITY_THRESHOLD: '0.65'
+          DECISIONS_FULL_TEST_THRESHOLD: '0.55'
+          DECISIONS_DEPLOY_APPROVAL_THRESHOLD: '0.60'
+          DECISIONS_DOCS_ONLY_THRESHOLD: '0.80'
+        run: python3 .github/scripts/decisions-change-risk/decisions_change_risk.py
+
+  classify-staff:
+    name: Classify change risk (staff CAPI)
+    needs: baseline-validation
+    if: github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      classification-available: ${{ steps.classify.outputs.classification-available }}
+      classification-status: ${{ steps.classify.outputs.classification-status }}
+      provider: ${{ steps.classify.outputs.provider }}
+      model: ${{ steps.classify.outputs.model }}
+      latency-ms: ${{ steps.classify.outputs.latency-ms }}
+      input-tokens: ${{ steps.classify.outputs.input-tokens }}
+      output-tokens: ${{ steps.classify.outputs.output-tokens }}
+      files-considered: ${{ steps.classify.outputs.files-considered }}
+      diff-truncated: ${{ steps.classify.outputs.diff-truncated }}
+      security-sensitive: ${{ steps.classify.outputs.security-sensitive }}
+      security-probability: ${{ steps.classify.outputs.security-probability }}
+      needs-full-test-suite: ${{ steps.classify.outputs.needs-full-test-suite }}
+      full-test-probability: ${{ steps.classify.outputs.full-test-probability }}
+      needs-manual-deploy-approval: ${{ steps.classify.outputs.needs-manual-deploy-approval }}
+      deploy-approval-probability: ${{ steps.classify.outputs.deploy-approval-probability }}
+      docs-only: ${{ steps.classify.outputs.docs-only }}
+      docs-only-probability: ${{ steps.classify.outputs.docs-only-probability }}
+    steps:
+      - name: Checkout trusted router code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts/decisions-change-risk
+          sparse-checkout-cone-mode: false
+
+      - name: Run Decisions classifier
+        id: classify
+        env:
+          DECISIONS_GITHUB_TOKEN: ${{ github.token }}
+          DECISIONS_API_TOKEN: ${{ secrets.AUSTEN_PAT }}
+          DECISIONS_CREDENTIAL_NAME: AUSTEN_PAT
+          DECISIONS_PROVIDER: github_capi
+          DECISIONS_REPOSITORY: ${{ github.repository }}
+          DECISIONS_PR_NUMBER: ${{ inputs.pr_number }}
           DECISIONS_MAX_DIFF_CHARACTERS: '60000'
           DECISIONS_MAX_FILES: '100'
           DECISIONS_SECURITY_THRESHOLD: '0.65'
@@ -85,8 +151,8 @@ jobs:
 
   lightweight-validation:
     name: Lightweight validation demo
-    needs: classify-change-risk
-    if: needs.classify-change-risk.outputs.classification-available == 'true' && needs.classify-change-risk.outputs.needs-full-test-suite == 'false'
+    needs: [classify-public, classify-staff]
+    if: always() && ((needs.classify-public.outputs.classification-available == 'true' && needs.classify-public.outputs.needs-full-test-suite == 'false') || (needs.classify-staff.outputs.classification-available == 'true' && needs.classify-staff.outputs.needs-full-test-suite == 'false'))
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
@@ -95,8 +161,8 @@ jobs:
 
   full-validation:
     name: Full validation demo
-    needs: classify-change-risk
-    if: needs.classify-change-risk.outputs.classification-available == 'true' && needs.classify-change-risk.outputs.needs-full-test-suite == 'true'
+    needs: [classify-public, classify-staff]
+    if: always() && ((needs.classify-public.outputs.classification-available == 'true' && needs.classify-public.outputs.needs-full-test-suite == 'true') || (needs.classify-staff.outputs.classification-available == 'true' && needs.classify-staff.outputs.needs-full-test-suite == 'true'))
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
@@ -105,8 +171,8 @@ jobs:
 
   security-review:
     name: Security review demo
-    needs: classify-change-risk
-    if: needs.classify-change-risk.outputs.classification-available == 'true' && needs.classify-change-risk.outputs.security-sensitive == 'true'
+    needs: [classify-public, classify-staff]
+    if: always() && ((needs.classify-public.outputs.classification-available == 'true' && needs.classify-public.outputs.security-sensitive == 'true') || (needs.classify-staff.outputs.classification-available == 'true' && needs.classify-staff.outputs.security-sensitive == 'true'))
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
@@ -115,8 +181,8 @@ jobs:
 
   deploy-review:
     name: Deploy review demo
-    needs: classify-change-risk
-    if: needs.classify-change-risk.outputs.classification-available == 'true' && needs.classify-change-risk.outputs.needs-manual-deploy-approval == 'true'
+    needs: [classify-public, classify-staff]
+    if: always() && ((needs.classify-public.outputs.classification-available == 'true' && needs.classify-public.outputs.needs-manual-deploy-approval == 'true') || (needs.classify-staff.outputs.classification-available == 'true' && needs.classify-staff.outputs.needs-manual-deploy-approval == 'true'))
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:

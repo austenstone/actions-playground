@@ -10,7 +10,11 @@ import urllib.request
 from pathlib import Path
 
 DECISIONS_URL = "https://api.openai.com/v1/decisions"
-MODEL = "gpt-6-luna"
+COPILOT_USER_URL = "https://api.github.com/copilot_internal/user"
+OPENAI_PROVIDER = "openai"
+GITHUB_CAPI_PROVIDER = "github_capi"
+OPENAI_MODEL = "gpt-6-luna"
+GITHUB_CAPI_MODEL = "gpt-6-luna-decisions"
 EXPECTED_QUESTIONS = (
     "security_sensitive",
     "needs_full_test_suite",
@@ -57,9 +61,11 @@ QUESTION_DEFINITIONS = (
 OUTPUT_DEFAULTS = {
     "classification-available": "false",
     "classification-status": "error",
-    "model": MODEL,
+    "provider": "n/a",
+    "model": "n/a",
     "latency-ms": "n/a",
     "input-tokens": "n/a",
+    "output-tokens": "n/a",
     "files-considered": "0",
     "diff-truncated": "false",
     "security-sensitive": "false",
@@ -150,6 +156,7 @@ def parse_decision_response(response, thresholds):
 
     usage = response.get("usage")
     input_tokens = None
+    output_tokens = None
     if usage is not None:
         if not isinstance(usage, dict):
             raise DecisionResponseError("Decisions response contains malformed usage")
@@ -160,6 +167,13 @@ def parse_decision_response(response, thresholds):
             or input_tokens < 0
         ):
             raise DecisionResponseError("Decisions response contains invalid input token usage")
+        output_tokens = usage.get("output_tokens")
+        if output_tokens is not None and (
+            isinstance(output_tokens, bool)
+            or not isinstance(output_tokens, int)
+            or output_tokens < 0
+        ):
+            raise DecisionResponseError("Decisions response contains invalid output token usage")
 
     return {
         "model": model,
@@ -169,6 +183,7 @@ def parse_decision_response(response, thresholds):
             for name in EXPECTED_QUESTIONS
         },
         "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
     }
 
 
@@ -232,9 +247,9 @@ def build_diff_input(files, max_characters, max_files):
     }
 
 
-def build_request_payload(diff_input):
+def build_request_payload(diff_input, model=OPENAI_MODEL):
     return {
-        "model": MODEL,
+        "model": model,
         "input": diff_input,
         "questions": list(QUESTION_DEFINITIONS),
     }
@@ -270,6 +285,96 @@ def request_json(request, label, timeout=60):
         raise ApiRequestError(f"{label} returned malformed JSON") from error
 
 
+def validate_capi_origin(origin):
+    if not isinstance(origin, str) or not origin:
+        raise ApiRequestError("GitHub Copilot endpoint response is missing endpoints.api")
+    parsed = urllib.parse.urlparse(origin)
+    hostname = (parsed.hostname or "").lower()
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise ApiRequestError(
+            "GitHub Copilot endpoint response contains an invalid API origin"
+        ) from error
+    trusted_hostname = hostname == "api.githubcopilot.com" or hostname.endswith(
+        ".githubcopilot.com"
+    )
+    if (
+        parsed.scheme != "https"
+        or not trusted_hostname
+        or parsed.username
+        or parsed.password
+        or port
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in ("", "/")
+    ):
+        raise ApiRequestError("GitHub Copilot endpoint response contains an untrusted API origin")
+    return f"https://{hostname}"
+
+
+def resolve_capi_origin(token):
+    request = urllib.request.Request(
+        COPILOT_USER_URL,
+        headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "actions-playground-decisions-change-risk",
+        },
+    )
+    response = request_json(request, "GitHub Copilot endpoint discovery")
+    if not isinstance(response, dict):
+        raise ApiRequestError("GitHub Copilot endpoint discovery returned malformed data")
+    endpoints = response.get("endpoints")
+    if not isinstance(endpoints, dict):
+        raise ApiRequestError("GitHub Copilot endpoint discovery is missing endpoints")
+    return validate_capi_origin(endpoints.get("api"))
+
+
+def provider_model(provider):
+    if provider == OPENAI_PROVIDER:
+        return OPENAI_MODEL
+    if provider == GITHUB_CAPI_PROVIDER:
+        return GITHUB_CAPI_MODEL
+    raise ValueError(f"Unsupported Decisions provider: {provider}")
+
+
+def build_decisions_request(provider, token, payload, capi_origin=None):
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "User-Agent": "actions-playground-decisions-change-risk",
+    }
+    if provider == OPENAI_PROVIDER:
+        url = DECISIONS_URL
+    elif provider == GITHUB_CAPI_PROVIDER:
+        origin = validate_capi_origin(capi_origin)
+        url = f"{origin}/v1/decisions"
+        headers.update(
+            {
+                "Copilot-Integration-Id": "copilot-developer-app",
+                "Editor-Version": "CopilotCLI/1.0",
+            }
+        )
+    else:
+        raise ValueError(f"Unsupported Decisions provider: {provider}")
+
+    return urllib.request.Request(
+        url,
+        data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+        method="POST",
+        headers=headers,
+    )
+
+
+def validate_response_model(actual_model, expected_model):
+    if actual_model != expected_model:
+        raise DecisionResponseError(
+            f"Decisions response model {actual_model!r} did not match {expected_model!r}"
+        )
+
+
 def fetch_pull_request_files(repository, pr_number, github_token, max_files):
     owner_repo = urllib.parse.quote(repository, safe="/")
     files = []
@@ -298,22 +403,24 @@ def fetch_pull_request_files(repository, pr_number, github_token, max_files):
     return files[: max_files + 1]
 
 
-def call_decisions_api(api_key, payload):
-    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    request = urllib.request.Request(
-        DECISIONS_URL,
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "User-Agent": "actions-playground-decisions-change-risk",
-        },
+def call_decisions_api(provider, token, diff_input):
+    model = provider_model(provider)
+    capi_origin = resolve_capi_origin(token) if provider == GITHUB_CAPI_PROVIDER else None
+    request = build_decisions_request(
+        provider,
+        token,
+        build_request_payload(diff_input, model),
+        capi_origin,
     )
     started = time.monotonic()
-    response = request_json(request, "OpenAI Decisions request")
+    label = (
+        "public OpenAI Decisions request"
+        if provider == OPENAI_PROVIDER
+        else "GitHub staff CAPI Decisions request"
+    )
+    response = request_json(request, label)
     latency_ms = round((time.monotonic() - started) * 1000)
-    return response, latency_ms
+    return response, latency_ms, model
 
 
 def format_probability(value):
@@ -354,7 +461,13 @@ def write_summary(markdown):
         summary_file.write(markdown.rstrip() + "\n")
 
 
-def status_summary(status, message):
+def status_summary(status, message, provider):
+    destination = (
+        "the public OpenAI Decisions API"
+        if provider == OPENAI_PROVIDER
+        else "GitHub's staff CAPI Decisions endpoint"
+    )
+
     return f"""## OpenAI Decisions change-risk router
 
 > Shadow mode: baseline validation always runs. This classifier can only add demo work.
@@ -362,16 +475,18 @@ def status_summary(status, message):
 | Field | Value |
 |---|---|
 | Status | `{html.escape(status)}` |
+| Provider | `{html.escape(provider)}` |
 | Detail | {html.escape(message)} |
 
 No pull request diff or API response was written to logs or the job summary.
 """
 
 
-def success_summary(result, thresholds, diff_info, latency_ms):
+def success_summary(result, thresholds, diff_info, latency_ms, provider):
     probabilities = result["probabilities"]
     decisions = result["decisions"]
     input_tokens = result["input_tokens"]
+    output_tokens = result["output_tokens"]
     rows = []
     effects = {
         "security_sensitive": "Add security review demo",
@@ -400,16 +515,34 @@ def success_summary(result, thresholds, diff_info, latency_ms):
 | Field | Value |
 |---|---|
 | Status | `success` |
+| Provider | `{html.escape(provider)}` |
 | Model | `{html.escape(sanitize_message(result["model"]))}` |
 | API latency | {latency_ms} ms |
 | Input tokens | {input_tokens if input_tokens is not None else "n/a"} |
-| Estimated API cost | {format_cost(input_tokens)} |
+| Output tokens | {output_tokens if output_tokens is not None else "n/a"} |
+| Estimated API cost | {format_cost(input_tokens) if provider == OPENAI_PROVIDER else "not calculated for staff CAPI"} |
 | Files considered | {diff_info["files_considered"]} |
 | Input characters | {diff_info["characters"]} |
 | Diff truncated | `{str(diff_info["truncated"]).lower()}` |
 
-The bounded diff was sent to the public OpenAI Decisions API. The diff and full API response were not logged.
+The bounded diff was sent to {destination}. The diff and full API response were not logged.
 """
+
+
+def emit_success_log(result, thresholds, latency_ms, provider):
+    print(
+        "Decisions result "
+        f"provider={provider} model={sanitize_message(result['model'])} "
+        f"latency_ms={latency_ms} "
+        f"input_tokens={result['input_tokens'] if result['input_tokens'] is not None else 'n/a'} "
+        f"output_tokens={result['output_tokens'] if result['output_tokens'] is not None else 'n/a'}"
+    )
+    for name in EXPECTED_QUESTIONS:
+        print(
+            f"Decision {name} probability={format_probability(result['probabilities'][name])} "
+            f"threshold={thresholds[name]:.2f} "
+            f"routed={str(result['decisions'][name]).lower()}"
+        )
 
 
 def thresholds_from_environment():
@@ -436,6 +569,9 @@ def thresholds_from_environment():
 def run():
     outputs = dict(OUTPUT_DEFAULTS)
     try:
+        provider = os.environ.get("DECISIONS_PROVIDER", OPENAI_PROVIDER).strip()
+        provider_model(provider)
+        outputs["provider"] = provider
         thresholds = thresholds_from_environment()
         max_characters = parse_positive_integer(
             os.environ.get("DECISIONS_MAX_DIFF_CHARACTERS", "60000"),
@@ -452,15 +588,23 @@ def run():
         if skip_reason:
             outputs["classification-status"] = "skipped"
             write_outputs(outputs)
-            write_summary(status_summary("skipped", skip_reason))
+            write_summary(status_summary("skipped", skip_reason, provider))
             return 0
 
-        api_key = os.environ.get("DECISIONS_OPENAI_API_KEY", "").strip()
-        if not api_key:
-            message = "OPENAI_API_KEY is not configured; classification was not attempted."
-            outputs["classification-status"] = "skipped_missing_api_key"
+        api_token = os.environ.get("DECISIONS_API_TOKEN", "").strip()
+        credential_name = os.environ.get(
+            "DECISIONS_CREDENTIAL_NAME",
+            "OPENAI_API_KEY" if provider == OPENAI_PROVIDER else "AUSTEN_PAT",
+        ).strip()
+        if not api_token:
+            message = (
+                f"{credential_name} is not configured; classification was not attempted."
+            )
+            outputs["classification-status"] = "skipped_missing_credential"
             write_outputs(outputs)
-            write_summary(status_summary("skipped_missing_api_key", message))
+            write_summary(
+                status_summary("skipped_missing_credential", message, provider)
+            )
             emit_warning(message)
             return 0
 
@@ -474,21 +618,29 @@ def run():
 
         files = fetch_pull_request_files(repository, pr_number, github_token, max_files)
         diff_info = build_diff_input(files, max_characters, max_files)
-        response, latency_ms = call_decisions_api(
-            api_key,
-            build_request_payload(diff_info["input"]),
+        response, latency_ms, expected_model = call_decisions_api(
+            provider,
+            api_token,
+            diff_info["input"],
         )
         result = parse_decision_response(response, thresholds)
+        validate_response_model(result["model"], expected_model)
 
         outputs.update(
             {
                 "classification-available": "true",
                 "classification-status": "success",
+                "provider": provider,
                 "model": sanitize_message(result["model"]),
                 "latency-ms": str(latency_ms),
                 "input-tokens": (
                     str(result["input_tokens"])
                     if result["input_tokens"] is not None
+                    else "n/a"
+                ),
+                "output-tokens": (
+                    str(result["output_tokens"])
+                    if result["output_tokens"] is not None
                     else "n/a"
                 ),
                 "files-considered": str(diff_info["files_considered"]),
@@ -518,7 +670,10 @@ def run():
             }
         )
         write_outputs(outputs)
-        write_summary(success_summary(result, thresholds, diff_info, latency_ms))
+        write_summary(
+            success_summary(result, thresholds, diff_info, latency_ms, provider)
+        )
+        emit_success_log(result, thresholds, latency_ms, provider)
         return 0
     except DecisionRefusal as error:
         outputs["classification-status"] = "refused"
@@ -528,7 +683,13 @@ def run():
         message = sanitize_message(error)
 
     write_outputs(outputs)
-    write_summary(status_summary(outputs["classification-status"], message))
+    write_summary(
+        status_summary(
+            outputs["classification-status"],
+            message,
+            outputs["provider"],
+        )
+    )
     emit_warning(message)
     return 0
 

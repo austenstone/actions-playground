@@ -1,0 +1,29 @@
+{
+  "answers": [
+    {
+      "type": "predicate",
+      "name": "security_sensitive",
+      "probability": 0.0
+    },
+    {
+      "type": "predicate",
+      "name": "needs_full_test_suite",
+      "probability": 0.0
+    },
+    {
+      "type": "predicate",
+      "name": "needs_manual_deploy_approval",
+      "probability": 0.0
+    },
+    {
+      "type": "predicate",
+      "name": "docs_only",
+      "probability": 1.0
+    }
+  ],
+  "model": "gpt-6-luna-decisions",
+  "usage": {
+    "input_tokens": 355,
+    "output_tokens": 0
+  }
+}
