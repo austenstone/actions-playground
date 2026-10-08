@@ -28,40 +28,36 @@ jobs:
       - name: Checkout trusted classifier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
           persist-credentials: false
-          sparse-checkout: .github/scripts/decisions-change-risk
-          sparse-checkout-cone-mode: false
 
       - name: Classify pull request risk
         id: classify
-        env:
-          DECISIONS_GITHUB_TOKEN: ${{ github.token }}
-          DECISIONS_API_TOKEN: ${{ secrets.COPILOT_CAPI_TOKEN }}
-          DECISIONS_CREDENTIAL_NAME: COPILOT_CAPI_TOKEN
-          DECISIONS_PROVIDER: github_capi
-          DECISIONS_REPOSITORY: ${{ github.repository }}
-          DECISIONS_PR_NUMBER: ${{ inputs.pr_number }}
-          DECISIONS_MAX_DIFF_CHARACTERS: '60000'
-          DECISIONS_MAX_FILES: '100'
-          DECISIONS_SECURITY_THRESHOLD: '0.65'
-          DECISIONS_FULL_TEST_THRESHOLD: '0.55'
-          DECISIONS_DEPLOY_APPROVAL_THRESHOLD: '0.60'
-          DECISIONS_DOCS_ONLY_THRESHOLD: '0.80'
-        run: python3 .github/scripts/decisions-change-risk/decisions_change_risk.py
+        uses: ./.github/actions/decisions-change-risk # zizmor: ignore[self-repository] local demo action comes from the trusted checkout
+        with:
+          pr-number: ${{ inputs.pr_number }}
+          github-token: ${{ github.token }}
+          capi-token: ${{ secrets.COPILOT_CAPI_TOKEN }}
 
       - name: Lightweight validation route
         if: steps.classify.outputs.classification-available == 'true' && steps.classify.outputs.needs-full-test-suite == 'false'
-        run: echo "Demo only - add targeted checks without suppressing required CI."
+        env:
+          PROBABILITY: ${{ steps.classify.outputs.full-test-probability }}
+        run: echo "Demo only - add targeted checks without suppressing required CI (full-suite probability $PROBABILITY)."
 
       - name: Full validation route
         if: steps.classify.outputs.classification-available == 'true' && steps.classify.outputs.needs-full-test-suite == 'true'
-        run: echo "Demo only - add the full test suite without suppressing required CI."
+        env:
+          PROBABILITY: ${{ steps.classify.outputs.full-test-probability }}
+        run: echo "Demo only - add the full test suite without suppressing required CI (probability $PROBABILITY)."
 
       - name: Security review route
         if: steps.classify.outputs.classification-available == 'true' && steps.classify.outputs.security-sensitive == 'true'
-        run: echo "Demo only - add security tooling or human review."
+        env:
+          PROBABILITY: ${{ steps.classify.outputs.security-probability }}
+        run: echo "Demo only - add security tooling or human review (probability $PROBABILITY)."
 
       - name: Deploy approval route
         if: steps.classify.outputs.classification-available == 'true' && steps.classify.outputs.needs-manual-deploy-approval == 'true'
-        run: echo "Demo only - request human deploy review; this workflow does not deploy."
+        env:
+          PROBABILITY: ${{ steps.classify.outputs.deploy-approval-probability }}
+        run: echo "Demo only - request human deploy review; this workflow does not deploy (probability $PROBABILITY)."

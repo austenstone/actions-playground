@@ -1,0 +1,111 @@
+name: Decisions change-risk router
+description: Classify a bounded pull request diff with GitHub's staff Decisions API.
+
+inputs:
+  pr-number:
+    description: Pull request number to classify.
+    required: true
+  github-token:
+    description: Read-only token used to fetch pull request files.
+    required: true
+  capi-token:
+    description: Staff Copilot token used for endpoint discovery and Decisions.
+    required: true
+  max-diff-characters:
+    description: Maximum diff characters sent to Decisions.
+    required: false
+    default: '60000'
+  max-files:
+    description: Maximum changed files included in the classifier input.
+    required: false
+    default: '100'
+  security-threshold:
+    description: Probability threshold for security-sensitive routing.
+    required: false
+    default: '0.65'
+  full-test-threshold:
+    description: Probability threshold for full-test-suite routing.
+    required: false
+    default: '0.55'
+  deploy-approval-threshold:
+    description: Probability threshold for manual deploy review.
+    required: false
+    default: '0.60'
+  docs-only-threshold:
+    description: Probability threshold for the informational docs-only signal.
+    required: false
+    default: '0.80'
+
+outputs:
+  classification-available:
+    description: Whether a complete valid Decisions response was received.
+    value: ${{ steps.classify.outputs.classification-available }}
+  classification-status:
+    description: Classification status such as success, refused, skipped, or error.
+    value: ${{ steps.classify.outputs.classification-status }}
+  provider:
+    description: Decisions provider used by the classifier.
+    value: ${{ steps.classify.outputs.provider }}
+  model:
+    description: Model reported by the Decisions response.
+    value: ${{ steps.classify.outputs.model }}
+  latency-ms:
+    description: Decisions request latency in milliseconds.
+    value: ${{ steps.classify.outputs.latency-ms }}
+  input-tokens:
+    description: Input token usage reported by Decisions.
+    value: ${{ steps.classify.outputs.input-tokens }}
+  output-tokens:
+    description: Output token usage reported by Decisions.
+    value: ${{ steps.classify.outputs.output-tokens }}
+  files-considered:
+    description: Number of changed files included in the bounded input.
+    value: ${{ steps.classify.outputs.files-considered }}
+  diff-truncated:
+    description: Whether a file or character limit truncated the input.
+    value: ${{ steps.classify.outputs.diff-truncated }}
+  security-sensitive:
+    description: Whether security_sensitive met its threshold.
+    value: ${{ steps.classify.outputs.security-sensitive }}
+  security-probability:
+    description: Probability returned for security_sensitive.
+    value: ${{ steps.classify.outputs.security-probability }}
+  needs-full-test-suite:
+    description: Whether needs_full_test_suite met its threshold.
+    value: ${{ steps.classify.outputs.needs-full-test-suite }}
+  full-test-probability:
+    description: Probability returned for needs_full_test_suite.
+    value: ${{ steps.classify.outputs.full-test-probability }}
+  needs-manual-deploy-approval:
+    description: Whether needs_manual_deploy_approval met its threshold.
+    value: ${{ steps.classify.outputs.needs-manual-deploy-approval }}
+  deploy-approval-probability:
+    description: Probability returned for needs_manual_deploy_approval.
+    value: ${{ steps.classify.outputs.deploy-approval-probability }}
+  docs-only:
+    description: Informational docs_only signal.
+    value: ${{ steps.classify.outputs.docs-only }}
+  docs-only-probability:
+    description: Probability returned for docs_only.
+    value: ${{ steps.classify.outputs.docs-only-probability }}
+
+runs:
+  using: composite
+  steps:
+    - name: Call Decisions API
+      id: classify
+      shell: bash
+      env:
+        DECISIONS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        DECISIONS_API_TOKEN: ${{ inputs.capi-token }}
+        DECISIONS_CREDENTIAL_NAME: COPILOT_CAPI_TOKEN
+        DECISIONS_PROVIDER: github_capi
+        DECISIONS_REPOSITORY: ${{ github.repository }}
+        DECISIONS_PR_NUMBER: ${{ inputs.pr-number }}
+        DECISIONS_MAX_DIFF_CHARACTERS: ${{ inputs.max-diff-characters }}
+        DECISIONS_MAX_FILES: ${{ inputs.max-files }}
+        DECISIONS_SECURITY_THRESHOLD: ${{ inputs.security-threshold }}
+        DECISIONS_FULL_TEST_THRESHOLD: ${{ inputs.full-test-threshold }}
+        DECISIONS_DEPLOY_APPROVAL_THRESHOLD: ${{ inputs.deploy-approval-threshold }}
+        DECISIONS_DOCS_ONLY_THRESHOLD: ${{ inputs.docs-only-threshold }}
+      run: python3 "$GITHUB_ACTION_PATH/decisions_change_risk.py"

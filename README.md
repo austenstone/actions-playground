@@ -2,7 +2,7 @@ This repository serves as a comprehensive collection of resources and examples d
 
 # Experiments
 
-- [Decisions PR risk router demo](./docs/decisions-change-risk.md) - A manual staff demo that turns bounded PR diff predicates into additive CI routes.
+- [Decisions PR risk router demo](./docs/decisions-change-risk.md) - A reusable composite action that turns bounded PR diff predicates into additive CI routes.
 
 # Resources
 

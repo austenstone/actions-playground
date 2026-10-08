@@ -1,14 +1,14 @@
 # Decisions PR risk router demo
 
-This manual [GitHub Actions workflow](../.github/workflows/decisions-change-risk.yml) uses OpenAI's public-beta [Decisions API](https://developers.openai.com/api/docs/guides/decisions) to classify a pull request diff and demonstrate additive CI routing.
+This manual [GitHub Actions workflow](../.github/workflows/decisions-change-risk.yml) uses the reusable [Decisions change-risk router action](../.github/actions/decisions-change-risk/action.yml) to classify a pull request diff and demonstrate additive CI routing.
 
 It is intentionally **shadow mode**. The output can suggest extra tests or reviews, but it does not deploy anything or suppress required checks.
 
 ## What it does
 
 1. A trusted user manually enters a pull request number on the repository's default branch.
-2. The workflow checks out only the [classifier script](../.github/scripts/decisions-change-risk/decisions_change_risk.py) from that trusted commit.
-3. The script reads changed-file metadata and patches with the read-only `github.token`.
+2. A normal checkout makes the repository's local composite action available on the runner.
+3. The action reads changed-file metadata and patches with the read-only `github.token`.
 4. It resolves the staff Copilot API origin from `GET https://api.github.com/copilot_internal/user`.
 5. It calls `<origin>/v1/decisions` with the preview model `gpt-6-luna-decisions`.
 6. Short conditional steps show which additional CI paths would run.
@@ -32,9 +32,27 @@ The workflow is `workflow_dispatch` only and its single job runs only from the r
 
 This staff CAPI path is **internal experimentation only**, not a public integration pattern. Prefer a product-supported short-lived or workload identity for production when one exists.
 
-The classifier treats the diff as untrusted data, not instructions. It accepts only an HTTPS API origin on `githubcopilot.com` or a subdomain, sends at most 100 changed files and 60,000 characters, and never logs the full diff or API response. GitHub can omit patches for binary files or truncate very large patches.
+The action treats the diff as untrusted data, not instructions. It accepts only an HTTPS API origin on `githubcopilot.com` or a subdomain, sends at most 100 changed files and 60,000 characters, and never logs the full diff or API response. GitHub can omit patches for binary files or truncate very large patches.
 
 The bounded filenames and patch content are transmitted to the selected Copilot API endpoint. Confirm privacy, retention, residency, and regulatory requirements before adapting this experiment to other repositories.
+
+The workflow keeps one ordinary `actions/checkout` step because repository-local composite actions must exist on the runner before `uses: ./.github/actions/decisions-change-risk` can load them. Publishing the action in a separate repository, or referencing a remotely pinned repository/path action, could remove that checkout. That extra publishing machinery is unnecessary for this contained demo.
+
+## Reuse the action
+
+The workflow keeps the API plumbing behind one legible step:
+
+```yaml
+- name: Classify pull request risk
+  id: classify
+  uses: ./.github/actions/decisions-change-risk
+  with:
+    pr-number: ${{ inputs.pr_number }}
+    github-token: ${{ github.token }}
+    capi-token: ${{ secrets.COPILOT_CAPI_TOKEN }}
+```
+
+The action exposes status, provider, model, latency, token usage, bounded-input metadata, and the four predicate probabilities plus thresholded booleans. Optional inputs customize thresholds and diff bounds without putting HTTP or parsing logic back into the workflow.
 
 ## Run the demo
 
@@ -49,10 +67,14 @@ The bounded filenames and patch content are transmitted to the selected Copilot 
 No API credential is required for deterministic validation:
 
 ```bash
-python3 -m unittest discover -s .github/scripts/decisions-change-risk -p 'test_*.py'
+python3 -m unittest discover -s .github/actions/decisions-change-risk -p 'test_*.py'
 python3 -m py_compile \
-  .github/scripts/decisions-change-risk/decisions_change_risk.py \
-  .github/scripts/decisions-change-risk/test_decisions_change_risk.py
+  .github/actions/decisions-change-risk/decisions_change_risk.py \
+  .github/actions/decisions-change-risk/test_decisions_change_risk.py
 actionlint .github/workflows/decisions-change-risk.yml
-zizmor .github/workflows/decisions-change-risk.yml
+zizmor \
+  .github/actions/decisions-change-risk/action.yml \
+  .github/workflows/decisions-change-risk.yml
 ```
+
+`actionlint` validates workflow files; `zizmor` parses and audits both the workflow and composite action metadata.
