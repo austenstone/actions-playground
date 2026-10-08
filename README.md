@@ -2,7 +2,7 @@ This repository serves as a comprehensive collection of resources and examples d
 
 # Experiments
 
-- [OpenAI Decisions change-risk router](./docs/decisions-change-risk.md) - A shadow-mode PR classifier that routes additive validation and review jobs from bounded diff predicates.
+- [Decisions PR risk router demo](./docs/decisions-change-risk.md) - A manual staff demo that turns bounded PR diff predicates into additive CI routes.
 
 # Resources
 
