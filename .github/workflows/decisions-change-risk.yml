@@ -136,8 +136,8 @@ jobs:
         id: classify
         env:
           DECISIONS_GITHUB_TOKEN: ${{ github.token }}
-          DECISIONS_API_TOKEN: ${{ secrets.AUSTEN_PAT }}
-          DECISIONS_CREDENTIAL_NAME: AUSTEN_PAT
+          DECISIONS_API_TOKEN: ${{ secrets.COPILOT_CAPI_TOKEN }}
+          DECISIONS_CREDENTIAL_NAME: COPILOT_CAPI_TOKEN
           DECISIONS_PROVIDER: github_capi
           DECISIONS_REPOSITORY: ${{ github.repository }}
           DECISIONS_PR_NUMBER: ${{ inputs.pr_number }}

@@ -594,7 +594,9 @@ def run():
         api_token = os.environ.get("DECISIONS_API_TOKEN", "").strip()
         credential_name = os.environ.get(
             "DECISIONS_CREDENTIAL_NAME",
-            "OPENAI_API_KEY" if provider == OPENAI_PROVIDER else "AUSTEN_PAT",
+            "OPENAI_API_KEY"
+            if provider == OPENAI_PROVIDER
+            else "COPILOT_CAPI_TOKEN",
         ).strip()
         if not api_token:
             message = (

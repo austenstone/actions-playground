@@ -36,11 +36,11 @@ Repository secrets are available to same-repository pull request workflows. This
 
 ### Automatic pull request runs
 
-Pull requests use the public OpenAI endpoint and read only `OPENAI_API_KEY`. If that secret is absent, including on forks, the classifier skips before fetching or transmitting the diff. `AUSTEN_PAT` is never referenced by the pull request classifier step.
+Pull requests use the public OpenAI endpoint and read only `OPENAI_API_KEY`. If that secret is absent, including on forks, the classifier skips before fetching or transmitting the diff. `COPILOT_CAPI_TOKEN` is never referenced by the pull request classifier step.
 
 ### Trusted manual staff demo
 
-Manual dispatch from the repository's default branch uses the existing `AUSTEN_PAT` only for GitHub's staff CAPI preview:
+Manual dispatch from the repository's default branch uses the dedicated `COPILOT_CAPI_TOKEN` secret only for GitHub's staff CAPI preview:
 
 1. `GET https://api.github.com/copilot_internal/user` resolves `.endpoints.api`.
 2. The script accepts only an HTTPS origin on `githubcopilot.com` or a subdomain.
@@ -48,7 +48,7 @@ Manual dispatch from the repository's default branch uses the existing `AUSTEN_P
 
 The secret is scoped to the staff classifier step, which runs only for `workflow_dispatch` on the default branch. A dispatch from another ref fails before the staff step. The workflow never prints the token and does not use it to fetch pull request data.
 
-This path is **staff/internal experimentation only**, not a public integration pattern. It relies on an existing personal PAT because the preview currently requires Copilot staff authentication. Do not create or recommend a long-lived PAT for production use; prefer a product-supported short-lived or workload identity when one exists.
+This path is **staff/internal experimentation only**, not a public integration pattern. The dedicated secret contains a GitHub CLI authentication token because the preview currently requires Copilot staff authentication. Do not copy this pattern into production; prefer a product-supported short-lived or workload identity when one exists.
 
 ## Data handling
 
