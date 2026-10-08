@@ -48,6 +48,8 @@ Manual dispatch from the repository's default branch uses the dedicated `COPILOT
 
 The secret is scoped to the staff classifier step, which runs only for `workflow_dispatch` on the default branch. A dispatch from another ref fails before the staff step. The workflow never prints the token and does not use it to fetch pull request data.
 
+The staff endpoint may report the canonical response model as `gpt-6-luna` even though the request uses the preview alias `gpt-6-luna-decisions`. The parser accepts only those two model names for staff mode and still reports the model returned by the service.
+
 This path is **staff/internal experimentation only**, not a public integration pattern. The dedicated secret contains a GitHub CLI authentication token because the preview currently requires Copilot staff authentication. Do not copy this pattern into production; prefer a product-supported short-lived or workload identity when one exists.
 
 ## Data handling

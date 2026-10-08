@@ -82,8 +82,19 @@ class DecisionResponseTests(unittest.TestCase):
         self.assertTrue(result["decisions"]["docs_only"])
 
     def test_response_model_must_match_selected_provider(self):
-        with self.assertRaisesRegex(DecisionResponseError, "did not match"):
-            validate_response_model(OPENAI_MODEL, GITHUB_CAPI_MODEL)
+        with self.assertRaisesRegex(DecisionResponseError, "not valid"):
+            validate_response_model(
+                OPENAI_PROVIDER,
+                GITHUB_CAPI_MODEL,
+                OPENAI_MODEL,
+            )
+
+    def test_staff_provider_accepts_canonical_response_model(self):
+        validate_response_model(
+            GITHUB_CAPI_PROVIDER,
+            OPENAI_MODEL,
+            GITHUB_CAPI_MODEL,
+        )
 
 
 class ProviderTests(unittest.TestCase):

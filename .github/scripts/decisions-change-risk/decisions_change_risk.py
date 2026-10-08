@@ -368,10 +368,13 @@ def build_decisions_request(provider, token, payload, capi_origin=None):
     )
 
 
-def validate_response_model(actual_model, expected_model):
-    if actual_model != expected_model:
+def validate_response_model(provider, actual_model, expected_model):
+    accepted_models = {expected_model}
+    if provider == GITHUB_CAPI_PROVIDER:
+        accepted_models.add(OPENAI_MODEL)
+    if actual_model not in accepted_models:
         raise DecisionResponseError(
-            f"Decisions response model {actual_model!r} did not match {expected_model!r}"
+            f"Decisions response model {actual_model!r} was not valid for {provider}"
         )
 
 
@@ -626,7 +629,7 @@ def run():
             diff_info["input"],
         )
         result = parse_decision_response(response, thresholds)
-        validate_response_model(result["model"], expected_model)
+        validate_response_model(provider, result["model"], expected_model)
 
         outputs.update(
             {
