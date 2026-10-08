@@ -20,6 +20,7 @@ from decisions_change_risk import (  # noqa: E402
     build_request_payload,
     parse_decision_response,
     resolve_capi_origin,
+    success_summary,
     validate_capi_origin,
     validate_response_model,
 )
@@ -80,6 +81,23 @@ class DecisionResponseTests(unittest.TestCase):
         self.assertEqual(result["input_tokens"], 355)
         self.assertEqual(result["output_tokens"], 0)
         self.assertTrue(result["decisions"]["docs_only"])
+
+    def test_staff_success_summary_names_capi_destination(self):
+        result = parse_decision_response(load_fixture("staff-docs-only.json"), THRESHOLDS)
+
+        summary = success_summary(
+            result,
+            THRESHOLDS,
+            {
+                "files_considered": 1,
+                "characters": 500,
+                "truncated": False,
+            },
+            425,
+            GITHUB_CAPI_PROVIDER,
+        )
+
+        self.assertIn("GitHub's staff CAPI Decisions endpoint", summary)
 
     def test_response_model_must_match_selected_provider(self):
         with self.assertRaisesRegex(DecisionResponseError, "not valid"):

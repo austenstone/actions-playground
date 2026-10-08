@@ -465,12 +465,6 @@ def write_summary(markdown):
 
 
 def status_summary(status, message, provider):
-    destination = (
-        "the public OpenAI Decisions API"
-        if provider == OPENAI_PROVIDER
-        else "GitHub's staff CAPI Decisions endpoint"
-    )
-
     return f"""## OpenAI Decisions change-risk router
 
 > Shadow mode: baseline validation always runs. This classifier can only add demo work.
@@ -490,6 +484,11 @@ def success_summary(result, thresholds, diff_info, latency_ms, provider):
     decisions = result["decisions"]
     input_tokens = result["input_tokens"]
     output_tokens = result["output_tokens"]
+    destination = (
+        "the public OpenAI Decisions API"
+        if provider == OPENAI_PROVIDER
+        else "GitHub's staff CAPI Decisions endpoint"
+    )
     rows = []
     effects = {
         "security_sensitive": "Add security review demo",
