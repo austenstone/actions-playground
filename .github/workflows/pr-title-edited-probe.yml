@@ -1,0 +1,35 @@
+name: PR Title Edited Probe
+
+run-name: "PR #${{ github.event.pull_request.number }}: ${{ github.event.action }}"
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+permissions: {}
+
+jobs:
+  validate-title:
+    name: PR title contains a ticket key
+    runs-on: ubuntu-slim
+    env:
+      PR_ACTION: ${{ github.event.action }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PREVIOUS_TITLE: ${{ github.event.changes.title.from || '(none)' }}
+    steps:
+      - name: Record event
+        run: |
+          {
+            echo "## Pull request title validation"
+            echo
+            echo "- Action: \`$PR_ACTION\`"
+            echo "- Previous title: \`$PREVIOUS_TITLE\`"
+            echo "- Current title: \`$PR_TITLE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate ticket key
+        run: |
+          if [[ ! "$PR_TITLE" =~ [A-Z][A-Z0-9]+-[0-9]+ ]]; then
+            echo "::error::PR title must contain a ticket key such as TEST-123."
+            exit 1
+          fi
