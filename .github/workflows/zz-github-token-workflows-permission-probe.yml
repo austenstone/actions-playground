@@ -1,0 +1,66 @@
+name: GITHUB_TOKEN workflow write probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: github-token-workflow-write-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Create a commit that changes a workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf '\n# Probe change from run %s\n' "$GITHUB_RUN_ID" >> .github/workflows/zz-github-token-workflows-permission-probe.yml
+          printf 'run_id=%s\n' "$GITHUB_RUN_ID" > github-token-probe.txt
+          git add .github/workflows/zz-github-token-workflows-permission-probe.yml github-token-probe.txt
+          git commit -m "Test GITHUB_TOKEN workflow write restriction"
+
+      - name: Test full and workflow-excluding pushes
+        env:
+          FULL_TARGET: probe/github-token-full-sync-20261015
+          FILTERED_TARGET: probe/github-token-filtered-sync-20261015
+        run: |
+          set +e
+          full_output="$(git push origin "HEAD:refs/heads/$FULL_TARGET" 2>&1)"
+          full_status=$?
+          set -e
+
+          {
+            echo '### Full sync'
+            echo '```text'
+            printf '%s\n' "$full_output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ $full_status -eq 0 ]]; then
+            echo "Expected the workflow-changing push to fail, but it succeeded." >&2
+            exit 1
+          fi
+
+          if [[ "$full_output" != *"refusing to allow a GitHub App to create or update workflow"* ]]; then
+            echo "The push failed for an unexpected reason." >&2
+            exit 1
+          fi
+
+          git restore --source=HEAD^ -- .github/workflows/zz-github-token-workflows-permission-probe.yml
+          git add .github/workflows/zz-github-token-workflows-permission-probe.yml
+          git commit --amend --no-edit
+          git push origin "HEAD:refs/heads/$FILTERED_TARGET"
+
+          {
+            echo
+            echo '### Workflow-excluding sync'
+            echo "The same commit pushed successfully after preserving the destination workflow file."
+          } >> "$GITHUB_STEP_SUMMARY"
